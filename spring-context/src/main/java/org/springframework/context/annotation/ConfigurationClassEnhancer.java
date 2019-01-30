@@ -126,6 +126,7 @@ class ConfigurationClassEnhancer {
 	private Enhancer newEnhancer(Class<?> configSuperClass, @Nullable ClassLoader classLoader) {
 		Enhancer enhancer = new Enhancer();
 		//增强父类，地球人都知道cglib是基于继承来的
+		// 将当前类作为父类
 		enhancer.setSuperclass(configSuperClass);
 		//增强接口，为什么要增强接口?
 		//便于判断，表示一个类以及被增强了

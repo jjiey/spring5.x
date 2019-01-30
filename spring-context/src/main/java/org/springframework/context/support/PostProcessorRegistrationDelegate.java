@@ -111,6 +111,7 @@ final class PostProcessorRegistrationDelegate {
 			currentRegistryProcessors.clear();
 
 			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
+			// 因为ConfigurationClassPostProcessor implements PriorityOrdered，所以
 			postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (!processedBeans.contains(ppName) && beanFactory.isTypeMatch(ppName, Ordered.class)) {
@@ -142,10 +143,8 @@ final class PostProcessorRegistrationDelegate {
 			}
 
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
-			//执行BeanFactoryPostProcessor的回调，前面不是吗？
-			//前面执行的BeanFactoryPostProcessor的子类BeanDefinitionRegistryPostProcessor的回调
-			//这是执行的是BeanFactoryPostProcessor    postProcessBeanFactory
-			//ConfuguratuonClassPpostProcssor
+			//执行BeanFactoryPostProcessor的回调，这是执行的是postProcessBeanFactory（子类也需要执行父类的方法）
+			//前面执行的是BeanFactoryPostProcessor的子类BeanDefinitionRegistryPostProcessor的回调，前面执行的是postProcessBeanDefinitionRegistry
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 			//自定义BeanFactoryPostProcessor
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);

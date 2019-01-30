@@ -306,7 +306,7 @@ class ConfigurationClassParser {
 					}
 					//检查  todo
 					if (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, this.metadataReaderFactory)) {
-						parse(bdCand.getBeanClassName(), holder.getBeanName());
+						parse(bdCand.getBeanClassName(), holder.getBeanName()); // 将普通类放进configurationClasses
 					}
 				}
 			}
@@ -331,7 +331,6 @@ class ConfigurationClassParser {
 		 * 继而在递归调用本方法来处理这个类
 		 *
 		 * 判断一组类是不是imports（3种import）
-		 *
 		 *
 		 */
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
@@ -656,8 +655,7 @@ class ConfigurationClassParser {
 							//如果是一个普通类，会斤else
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
-					}
-					else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
+					} else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
 						// Candidate class is an ImportBeanDefinitionRegistrar ->
 						// delegate to it to register additional bean definitions
 						Class<?> candidateClass = candidate.loadClass();
@@ -667,8 +665,7 @@ class ConfigurationClassParser {
 								registrar, this.environment, this.resourceLoader, this.registry);
 						//添加到一个list当中和importselector不同
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
-					}
-					else {
+					} else {
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
 						// 否则，加入到importStack后调用processConfigurationClass 进行处理
