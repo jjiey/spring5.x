@@ -148,28 +148,40 @@ public class AnnotationConfigUtils {
 		DefaultListableBeanFactory beanFactory = unwrapDefaultListableBeanFactory(registry);
 		if (beanFactory != null) {
 			if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
-				//AnnotationAwareOrderComparator主要能解析@Order注解和@Priority
+				// AnnotationAwareOrderComparator主要能解析@Order注解和@Priority
 				beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 			}
 			if (!(beanFactory.getAutowireCandidateResolver() instanceof ContextAnnotationAutowireCandidateResolver)) {
-				//ContextAnnotationAutowireCandidateResolver提供处理延迟加载的功能
+				// ContextAnnotationAutowireCandidateResolver提供处理延迟加载的功能
 				beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
 			}
 		}
 
+		// BeanDefinitionHolder其实没有任何作用，看源码发现其实就是封装了几个对象，为了方便传参
 		Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
-		//BeanDefinitio的注册，这里很重要，需要理解注册每个bean的类型
+
+		/**
+		 * BeanDefinitio的注册，这里很重要，需要理解注册每个bean的类型
+		 * 在这里spring自己注册了6个类，1个是beanFactoryPostProcessor（ConfigurationClassPostProcessor），5个是beanPostProcessor
+		 */
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
-			//需要注意的是ConfigurationClassPostProcessor的类型是BeanDefinitionRegistryPostProcessor
-			//而 BeanDefinitionRegistryPostProcessor 最终实现BeanFactoryPostProcessor这个接口
+			// RootBeanDefinition是BeanDefinition的一种，现在可以理解为它是用来描述spring内部的类
+			/**
+			 * ConfigurationClassPostProcessor是spring里非常重要的类
+			 * 需要注意的是ConfigurationClassPostProcessor 的类型是 BeanDefinitionRegistryPostProcessor
+			 * 而BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor
+			 * 为什么要在这里注册ConfigurationClassPostProcessor？
+			 * 因为在后边annotationConfigApplicationContext.refresh()底层通过PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors()方法要调用所有的postProcessBeanDefinitionRegistry()方法在spring的beanFactory初始化的过程中去做一些事情
+			 * 怎么来做这些事情呢？委托了多个实现了BeanDefinitionRegistryPostProcessor或者BeanFactoryPostProcessor接口的类来做这些事情，有自定义的也有spring内部的；其中ConfigurationClassPostProcessor就是一个spring内部的BeanDefinitionRegistryPostProcessor；因为如果你不添加这里就没有办法委托ConfigurationClassPostProcessor做一些功能（回调，解耦，易于扩展）；到底哪些功能？参考ConfigurationClassPostProcessor的BeanDefinitionRegistryPostProcessors()方法源码
+			 */
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
 		if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
-			//AutowiredAnnotationBeanPostProcessor 实现了 MergedBeanDefinitionPostProcessor
-			//MergedBeanDefinitionPostProcessor 最终实现了 BeanPostProcessor
+			// AutowiredAnnotationBeanPostProcessor 实现了 MergedBeanDefinitionPostProcessor
+			// MergedBeanDefinitionPostProcessor 最终实现了 BeanPostProcessor
 			RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
@@ -220,7 +232,6 @@ public class AnnotationConfigUtils {
 
 	private static BeanDefinitionHolder registerPostProcessor(
 			BeanDefinitionRegistry registry, RootBeanDefinition definition, String beanName) {
-
 		definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 		registry.registerBeanDefinition(beanName, definition);
 		return new BeanDefinitionHolder(definition, beanName);

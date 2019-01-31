@@ -34,10 +34,10 @@ import org.springframework.lang.Nullable;
  * 查看类的关系图可以知道spring提供了以下的默认实现，因为高能，故而我们只是解释几个常用的
  * 1、ApplicationContextAwareProcessor （acap）
  *    acap后置处理器的作用是，当应用程序定义的Bean实现ApplicationContextAware接口时注入ApplicationContext对象
- *    当然这是他的第一个作业，他还有其他作用，这里不一一列举了，可以参考源码
+ *    当然这是他的第一个作用，他还有其他作用，这里不一一列举了，可以参考源码
  *    我们可以针对ApplicationContextAwareProcessor写一个栗子
- *  2、InitDestroyAnnotationBeanPostProcessor
- *     用来处理自定义的初始化方法和销毁方法
+ * 2、InitDestroyAnnotationBeanPostProcessor
+ *    用来处理自定义的初始化方法和销毁方法
  *    上次说过Spring中提供了3种自定义初始化和销毁方法分别是
  *    一、通过@Bean指定init-method和destroy-method属性
  *    二、Bean实现InitializingBean接口和实现DisposableBean
@@ -47,7 +47,7 @@ import org.springframework.lang.Nullable;
  *  3、InstantiationAwareBeanPostProcessor
  *  4、CommonAnnotationBeanPostProcessor
  *  5、AutowiredAnnotationBeanPostProcessor
- *  6 、RequiredAnnotationBeanPostProcessor
+ *  6、RequiredAnnotationBeanPostProcessor
  *  7、BeanValidationPostProcessor
  *  8、AbstractAutoProxyCreator
  *  ......
@@ -96,7 +96,7 @@ public interface BeanPostProcessor {
 	}
 
 	/**
-	 * 初始化之后
+	 * 在bean初始化之后执行
 	 * Apply this BeanPostProcessor to the given new bean instance <i>after</i> any bean
 	 * initialization callbacks (like InitializingBean's {@code afterPropertiesSet}
 	 * or a custom init-method). The bean will already be populated with property values.

@@ -1,4 +1,4 @@
-package com.myspringtest;
+package com.myspringtest.beanFactoryPostProcessor;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
