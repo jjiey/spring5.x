@@ -8,8 +8,8 @@ import org.springframework.context.annotation.*;
 
 @Configuration
 @ComponentScan({"com.myspringtest"})
-@Import(MyImportSelector.class)
-//@Import(MyImportBeanDefinitionRegistrar.class)
+//@Import(MyImportSelector.class)
+@Import(MyImportBeanDefinitionRegistrar.class)
 public class Appconfig {
 
 	/*

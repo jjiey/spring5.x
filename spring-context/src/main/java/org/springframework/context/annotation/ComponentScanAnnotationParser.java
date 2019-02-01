@@ -77,7 +77,7 @@ class ComponentScanAnnotationParser {
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
-		// BeanNameGenerator 判断有没有给它设置外部的bean的名字生成器
+		// 设置bean的名字生成器BeanNameGenerator（map里的Key）
 		Class<? extends BeanNameGenerator> generatorClass = componentScan.getClass("nameGenerator");
 		boolean useInheritedGenerator = (BeanNameGenerator.class == generatorClass);
 		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
@@ -111,6 +111,7 @@ class ComponentScanAnnotationParser {
 		// 是否懒加载，默认false
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
 		if (lazyInit) {
+			// 到这里时还没有bd，在这里给ClassPathBeanDefinitionScanner里的beanDefinitionDefaults设置一个lazy标识，到后面再给所有的bd设置lazy
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);
 		}
 

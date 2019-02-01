@@ -161,6 +161,7 @@ class ConfigurationClassParser {
 
 
 	public void parse(Set<BeanDefinitionHolder> configCandidates) {
+		// deferred：延迟的
 		this.deferredImportSelectors = new LinkedList<>();
 		// 根据BeanDefinition的不同类型做不同的处理，一般都会调用ConfigurationClassParser#parse进行解析
 		for (BeanDefinitionHolder holder : configCandidates) {
@@ -285,11 +286,11 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
-		// 为什么是set？因为@componentScan注解里有很多信息
+		// 为什么是set？因为@componentScan注解里有很多属性
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		/**
-		 * 下面这段代码就是扫描普通类（加了@Component），并且放到了map（configurationClasses）当中
+		 * 下面这段代码就是扫描普通类（加了@Component），并且放到map（configurationClasses）当中
 		 */
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
@@ -307,7 +308,7 @@ class ConfigurationClassParser {
 					}
 					// 检查扫描出来的类当中有没有加@Configuration或那4个注解，如果加了就设置标识返回true，没加就返回false
 					if (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, this.metadataReaderFactory)) {
-						// 如果加了@Configuration或那4个注解，将这个普通类解析完放进map（configurationClasses）里
+						// 如果加了@Configuration或那4个注解，将这个普通类解析完放到map（configurationClasses）里
 						parse(bdCand.getBeanClassName(), holder.getBeanName());
 					}
 				}
@@ -639,11 +640,12 @@ class ConfigurationClassParser {
 							this.deferredImportSelectors.add(
 									new DeferredImportSelectorHolder(configClass, (DeferredImportSelector) selector));
 						} else {
-							//回调
+							// 回调自定义实现了ImportSelector接口的方法实现selectImports()
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
+							// 得到对应的类
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);
-							//递归，这里第二次调用processImports
-							//如果是一个普通类，会斤else
+							// 递归，这里第二次调用processImports，处理Import的类当中又有Import的情况
+							// 递归终止条件是：最后是一个普通类，会进最下边的else
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
 					} else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
@@ -654,31 +656,27 @@ class ConfigurationClassParser {
 								BeanUtils.instantiateClass(candidateClass, ImportBeanDefinitionRegistrar.class);
 						ParserStrategyUtils.invokeAwareMethods(
 								registrar, this.environment, this.resourceLoader, this.registry);
-						//添加到一个list当中和importselector不同
+						// 添加到一个list（importBeanDefinitionRegistrars）当中
+						// 和importselector不同，importselector最后是放到list（configurationClasses）中
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					} else {
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
-						// 否则，加入到importStack后调用processConfigurationClass 进行处理
-						//processConfigurationClass里面主要就是把类放到configurationClasses
-						//configurationClasses是一个集合，会在后面拿出来解析成bd继而注册
-						//可以看到普通类在扫描出来的时候就被注册了
-						//如果是importSelector，会先放到configurationClasses后面进行出来注册
+						// 否则，加入到importStack后调用processConfigurationClass进行处理
+						// processConfigurationClass里面主要就是把类放到list（configurationClasses）中，然后会在后面拿出来解析成bd继而注册
+						// 可以看到：如果是普通类，在扫描出来的时候就被注册了；如果是importSelector，会先放到configurationClasses后面进行出来注册
 						this.importStack.registerImport(
 								currentSourceClass.getMetadata(), candidate.getMetadata().getClassName());
 						processConfigurationClass(candidate.asConfigClass(configClass));
 					}
 				}
-			}
-			catch (BeanDefinitionStoreException ex) {
+			} catch (BeanDefinitionStoreException ex) {
 				throw ex;
-			}
-			catch (Throwable ex) {
+			} catch (Throwable ex) {
 				throw new BeanDefinitionStoreException(
 						"Failed to process imports candidates for configuration class [" +
 						configClass.getMetadata().getClassName() + "]", ex);
-			}
-			finally {
+			} finally {
 				this.importStack.pop();
 			}
 		}

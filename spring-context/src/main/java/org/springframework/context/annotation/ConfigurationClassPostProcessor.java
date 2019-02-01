@@ -263,7 +263,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * {@link Configuration} classes.
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
-		// 定义一个list存放Appconfig提供的bd（项目当中加了@Component的类）
+		// 定义一个list存放项目中的配置类
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
 		// 获取容器中注册的所有bd名字（7个）
 		String[] candidateNames = registry.getBeanDefinitionNames();
@@ -282,8 +282,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
-			// 判断是否是Configuration类
-			// 如果加了Configuration下面的这几个注解就不再判断了：摘录isLiteConfigurationCandidate的源码：Component，ComponentScan，Import，ImportResource
+			// 判断有没有加@Configuration或那4个注解：Component，ComponentScan，Import，ImportResource
 			// 其实只有beanDef == Appconfig时if条件才会为true
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				// BeanDefinitionHolder其实没有任何作用，看源码发现其实就是封装了几个对象，为了方便传参
@@ -298,6 +297,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 
 		// Sort by previously determined @Order value, if applicable
 		// 排序，根据order去解析
+		// 注：springboot中就有多个AppConfig，需要排序
 		configCandidates.sort((bd1, bd2) -> {
 			int i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());
 			int i2 = ConfigurationClassUtils.getOrder(bd2.getBeanDefinition());
@@ -310,11 +310,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		 * 当前传入的是DefaultListableBeanFactory
 		 * DefaultListableBeanFactory implements ConfigurableListableBeanFactory extends ConfigurableBeanFactory extends SingletonBeanRegistry
 		 * 因此可以将registry强转为SingletonBeanRegistry
-		 * （得到bean的没名字生成器）
 		 */
 		if (registry instanceof SingletonBeanRegistry) {
 			sbr = (SingletonBeanRegistry) registry;
-			if (!this.localBeanNameGeneratorSet) { //是否有自定义的
+			if (!this.localBeanNameGeneratorSet) { // 判断是否有自定义的bean的名字生成器
 				BeanNameGenerator generator = (BeanNameGenerator) sbr.getSingleton(CONFIGURATION_BEAN_NAME_GENERATOR);
 				// SingletonBeanRegistry中是否有id为CONFIGURATION_BEAN_NAME_GENERATOR（org.springframework.context.annotation.internalConfigurationBeanNameGenerator）（这个id不是之前放进去的那6个中的一个），如果有则用他的，否则用spring默认的
 				if (generator != null) {
@@ -353,27 +352,26 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			}
 
 			/**
-			 * 这里值得注意的是扫描出来的bean当中可能包含了特殊类
-			 * 比如ImportBeanDefinitionRegistrar那么也在这个方法里面处理
-			 * 但是并不是包含在configClasses当中
-			 * configClasses当中主要包含的是importSelector
-			 * 因为ImportBeanDefinitionRegistrar在扫描出来的时候已经被添加到一个list当中去了
+			 * 这里值得注意的是扫描出来的bean当中可能包含了特殊类，list（configurationClasses）当中主要包含的是importSelector
+			 * ImportBeanDefinitionRegistrar也在这个方法里面处理，但是并不是包含在list（configurationClasses）当中，而是list（importBeanDefinitionRegistrars）当中
 			 */
-
-			//bd 到 map 除却普通
+			// 注册几种不同的bd到map中，去除普通类
 			this.reader.loadBeanDefinitions(configClasses);
+			// 处理过的加到alreadyParsed
 			alreadyParsed.addAll(configClasses);
-
+			// 清除临时变量
 			candidates.clear();
-			//由于我们这里进行了扫描，把扫描出来的BeanDefinition注册给了factory
-			//但是
+			// 由于我们这里进行了扫描，把扫描出来的BeanDefinition注册给了factory
+			// 但是 todo
 			if (registry.getBeanDefinitionCount() > candidateNames.length) {
-				String[] newCandidateNames = registry.getBeanDefinitionNames();
+ 				String[] newCandidateNames = registry.getBeanDefinitionNames();
 				Set<String> oldCandidateNames = new HashSet<>(Arrays.asList(candidateNames));
 				Set<String> alreadyParsedClasses = new HashSet<>();
 				for (ConfigurationClass configurationClass : alreadyParsed) {
 					alreadyParsedClasses.add(configurationClass.getMetadata().getClassName());
 				}
+				// 这里把新的newCandidateNames和原来那7个的oldCandidateNames取差集
+				// 循环判断差集里有没有，加了@Configuration或那4个注解的类 而且 没有处理过的（不是Import的）类，加入到candidates
 				for (String candidateName : newCandidateNames) {
 					if (!oldCandidateNames.contains(candidateName)) {
 						BeanDefinition bd = registry.getBeanDefinition(candidateName);
@@ -383,6 +381,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						}
 					}
 				}
+				// 更新candidateNames
 				candidateNames = newCandidateNames;
 			}
 		}
