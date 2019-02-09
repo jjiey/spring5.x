@@ -77,13 +77,13 @@ class ComponentScanAnnotationParser {
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
-		//BeanNameGenerator
+		// 设置bean的名字生成器BeanNameGenerator（map里的Key）
 		Class<? extends BeanNameGenerator> generatorClass = componentScan.getClass("nameGenerator");
 		boolean useInheritedGenerator = (BeanNameGenerator.class == generatorClass);
 		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
 				BeanUtils.instantiateClass(generatorClass));
 
-		//web当中在来讲
+		// web当中再来讲 判断这个类是不是代理的ProxyMode
 		ScopedProxyMode scopedProxyMode = componentScan.getEnum("scopedProxy");
 		if (scopedProxyMode != ScopedProxyMode.DEFAULT) {
 			scanner.setScopedProxyMode(scopedProxyMode);
@@ -93,9 +93,10 @@ class ComponentScanAnnotationParser {
 			scanner.setScopeMetadataResolver(BeanUtils.instantiateClass(resolverClass));
 		}
 
+		// 匹配一个表达式
 		scanner.setResourcePattern(componentScan.getString("resourcePattern"));
 
-		//遍历当中的过滤
+		// 遍历当中的过滤
 		for (AnnotationAttributes filter : componentScan.getAnnotationArray("includeFilters")) {
 			for (TypeFilter typeFilter : typeFiltersFor(filter)) {
 				scanner.addIncludeFilter(typeFilter);
@@ -107,12 +108,14 @@ class ComponentScanAnnotationParser {
 			}
 		}
 
-		//默认false
+		// 是否懒加载，默认false
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
 		if (lazyInit) {
+			// 到这里时还没有bd，在这里给ClassPathBeanDefinitionScanner里的beanDefinitionDefaults设置一个lazy标识，到后面再给所有的bd设置lazy
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);
 		}
 
+		// 获取basePackages，为什么是set？因为@componentScan注解里basePackages是String[]
 		Set<String> basePackages = new LinkedHashSet<>();
 		String[] basePackagesArray = componentScan.getStringArray("basePackages");
 		for (String pkg : basePackagesArray) {
@@ -127,6 +130,7 @@ class ComponentScanAnnotationParser {
 			basePackages.add(ClassUtils.getPackageName(declaringClass));
 		}
 
+		// 拿到@ComponentScan里配置的Exclude信息
 		scanner.addExcludeFilter(new AbstractTypeHierarchyTraversingFilter(false, false) {
 			@Override
 			protected boolean matchClassName(String className) {

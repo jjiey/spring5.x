@@ -1,6 +1,6 @@
 package com.myspringtest.test;
 
-import com.myspringtest.MyBeanFactoryPostProcessor;
+import com.myspringtest.beanFactoryPostProcessor.MyBeanFactoryPostProcessor;
 import com.myspringtest.app.Appconfig;
 import com.myspringtest.dao.IndexDao;
 import com.myspringtest.dao.IndexDao2;
@@ -20,7 +20,7 @@ public class TestMain {
 		indexDao.query();
 		IndexDao2 indexDao2 = annotationConfigApplicationContext.getBean(IndexDao2.class); // ImportSelector
 		indexDao2.query();
-		IndexDao3 indexDao3 = annotationConfigApplicationContext.getBean(IndexDao3.class); // ImportSelector
+		IndexDao3 indexDao3 = annotationConfigApplicationContext.getBean(IndexDao3.class); //
 		indexDao3.query();
 	}
 

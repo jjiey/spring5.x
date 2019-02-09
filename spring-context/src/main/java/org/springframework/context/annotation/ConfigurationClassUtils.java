@@ -71,6 +71,7 @@ abstract class ConfigurationClassUtils {
 
 
 	/**
+	 * 这个类主要是判断有没有加@Configuration或那4个注解，如果加了就设置标识，没加就return
 	 * Check whether the given bean definition is a candidate for a configuration class
 	 * (or a nested component class declared within a configuration/component class,
 	 * to be auto-registered as well), and mark it accordingly.
@@ -79,55 +80,57 @@ abstract class ConfigurationClassUtils {
 	 * @return whether the candidate qualifies as (any kind of) configuration class
 	 */
 	public static boolean checkConfigurationClassCandidate(BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
-			String className = beanDef.getBeanClassName();
-			if (className == null || beanDef.getFactoryMethodName() != null) {
+		String className = beanDef.getBeanClassName();
+		if (className == null || beanDef.getFactoryMethodName() != null) {
+			return false;
+		}
+
+		AnnotationMetadata metadata;
+		if (beanDef instanceof AnnotatedBeanDefinition &&
+				className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
+			// Can reuse the pre-parsed metadata from the given BeanDefinition...
+			// 如果BeanDefinition是AnnotatedBeanDefinition的实例,并且className和BeanDefinition中的元数据的类名相同，则直接从BeanDefinition获得Metadata
+			metadata = ((AnnotatedBeanDefinition) beanDef).getMetadata();
+		} else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
+			// Check already loaded Class if present...
+			// since we possibly can't even load the class file for this Class.
+			// 如果BeanDefinition是AbstractBeanDefinition的实例,并且beanDef有beanClass属性存在，则实例化StandardAnnotationMetadata
+			Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
+			metadata = new StandardAnnotationMetadata(beanClass, true);
+		} else {
+			try {
+				MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(className);
+				metadata = metadataReader.getAnnotationMetadata();
+			} catch (IOException ex) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("Could not find class file for introspecting configuration annotations: " + className, ex);
+				}
 				return false;
 			}
+		}
 
-			AnnotationMetadata metadata;
-			if (beanDef instanceof AnnotatedBeanDefinition &&
-					className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
-				// Can reuse the pre-parsed metadata from the given BeanDefinition...
-				//如果BeanDefinition 是 AnnotatedBeanDefinition的实例,并且className 和 BeanDefinition中 的元数据 的类名相同
-				// 则直接从BeanDefinition 获得Metadata
-				metadata = ((AnnotatedBeanDefinition) beanDef).getMetadata();
-			} else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
-				// Check already loaded Class if present...
-				// since we possibly can't even load the class file for this Class.
-				//如果BeanDefinition 是 AbstractBeanDefinition的实例,并且beanDef 有 beanClass 属性存在
-				//则实例化StandardAnnotationMetadata
-				Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
-				metadata = new StandardAnnotationMetadata(beanClass, true);
-			} else {
-				try {
-					MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(className);
-					metadata = metadataReader.getAnnotationMetadata();
-				}
-				catch (IOException ex) {
-					if (logger.isDebugEnabled()) {
-						logger.debug("Could not find class file for introspecting configuration annotations: " + className, ex);
-					}
-					return false;
-				}
-			}
-
-			//判断当前这个bd中存在的类是不是加了@Configruation注解
-			//如果存在则spring认为他是一个全注解的类
-			if (isFullConfigurationCandidate(metadata)) {
-				//如果存在Configuration 注解,则为BeanDefinition 设置configurationClass属性为full
-				beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
-			}
-			//判断是否加了以下注解，摘录isLiteConfigurationCandidate的源码
-			//     candidateIndicators.add(Component.class.getName());
-			//		candidateIndicators.add(ComponentScan.class.getName());
-			//		candidateIndicators.add(Import.class.getName());
-			//		candidateIndicators.add(ImportResource.class.getName());
-			//如果不存在Configuration注解，spring则认为是一个部分注解类
-			else if (isLiteConfigurationCandidate(metadata)) {
-				beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
-			} else {
-				return false;
-			}
+		/**
+		 * 判断有没有加@Configuration注解
+		 * 如果加了，设置一个标识（为BeanDefinition设置configurationClass属性为full）
+		 * 如果没加，还要看是否是一个普通类，有没有加以下四个注解：Component，ComponentScan，Import，ImportResource，如果有，设置一个标识（为BeanDefinition设置configurationClass属性为lite）
+		 * 为什么加了@Configuration注解就不判断其他四个注解？
+		 * 因为如果有一个类上边加了@Configuration，其他的注解都放到解析这个类时去解析；如果一个类上边没有加@Configuration，但是写了其他四个注解，那spring就要单独去解析
+		 */
+		// 判断当前这个bd中存在的类是不是加了@Configruation注解，如果存在则spring认为他是一个全注解的类
+		if (isFullConfigurationCandidate(metadata)) {
+			// 如果存在Configuration注解,则为BeanDefinition设置configurationClass属性为full
+			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
+		}
+		// 判断是否加了以下注解，摘录isLiteConfigurationCandidate的源码：Component，ComponentScan，Import，ImportResource
+		// 如果不存在Configuration注解，spring则认为是一个部分注解类
+		else if (isLiteConfigurationCandidate(metadata)) {
+			// 如果不存在Configuration注解,则为BeanDefinition设置configurationClass属性为lite
+			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
+		}
+		// 都不满足条件，直接返回false
+		else {
+			return false;
+		}
 
 		// It's a full or lite configuration candidate... Let's determine the order value, if any.
 		Integer order = getOrder(metadata);
@@ -170,11 +173,13 @@ abstract class ConfigurationClassUtils {
 	 */
 	public static boolean isLiteConfigurationCandidate(AnnotationMetadata metadata) {
 		// Do not consider an interface or an annotation...
+		// 如果是个接口，直接返回false
 		if (metadata.isInterface()) {
 			return false;
 		}
 
 		// Any of the typical annotations found?
+		// 循环判断有没有加那四个注解：Component，ComponentScan，Import，ImportResource
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;
@@ -184,8 +189,7 @@ abstract class ConfigurationClassUtils {
 		// Finally, let's look for @Bean methods...
 		try {
 			return metadata.hasAnnotatedMethods(Bean.class.getName());
-		}
-		catch (Throwable ex) {
+		} catch (Throwable ex) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Failed to introspect @Bean methods on class [" + metadata.getClassName() + "]: " + ex);
 			}

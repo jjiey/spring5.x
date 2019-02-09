@@ -272,32 +272,29 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
-			//扫描basePackage路径下的java文件
-			//符合条件的并把它转成BeanDefinition类型
+			// 扫描basePackage路径下的java文件，并把符合条件的转成BeanDefinition类型
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 
 			for (BeanDefinition candidate : candidates) {
-				//解析scope属性
+				// 解析scope属性
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 				if (candidate instanceof AbstractBeanDefinition) {
-					//如果这个类是AbstractBeanDefinition的子类
-					//则为他设置默认值，比如lazy，init destory
+					// 肯定会进来，因为上边findCandidateComponents()里new ScannedGenericBeanDefinition()，ScannedGenericBeanDefinition extends GenericBeanDefinition extends AbstractBeanDefinition
+					// 为所有的bd设置一些默认值，比如lazy（前边设置的那个lazy标识），init，destory
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
 				if (candidate instanceof AnnotatedBeanDefinition) {
-					//检查并且处理常用的注解
-					//这里的处理主要是指把常用注解的值设置到AnnotatedBeanDefinition当中
-					//当前前提是这个类必须是AnnotatedBeanDefinition类型的，说白了就是加了注解的类
+					// 检查并且处理常用的注解，这里的处理主要是指把常用注解的值设置到AnnotatedBeanDefinition当中，上边设置了一套默认值，在这里再把该类注解设置的值再set进去
+					// 当前前提是这个类必须是AnnotatedBeanDefinition类型的，说白了就是加了注解的类
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
-					definitionHolder =
-							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+					definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
-					//加入到map当中
+					// 注册到map当中
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}
@@ -312,6 +309,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @param beanName the generated bean name for the given bean
 	 */
 	protected void postProcessBeanDefinition(AbstractBeanDefinition beanDefinition, String beanName) {
+		// 为所有的bd设置一些默认值，比如lazy（前边设置的那个lazy标识），init，destory
 		beanDefinition.applyDefaults(this.beanDefinitionDefaults);
 		if (this.autowireCandidatePatterns != null) {
 			beanDefinition.setAutowireCandidate(PatternMatchUtils.simpleMatch(this.autowireCandidatePatterns, beanName));

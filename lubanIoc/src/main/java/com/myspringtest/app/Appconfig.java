@@ -2,12 +2,14 @@ package com.myspringtest.app;
 
 import com.myspringtest.dao.IndexDao3;
 import com.myspringtest.dao.IndexDao4;
+import com.myspringtest.imports.MyImportBeanDefinitionRegistrar;
 import com.myspringtest.imports.MyImportSelector;
 import org.springframework.context.annotation.*;
 
 @Configuration
 @ComponentScan({"com.myspringtest"})
-@Import(MyImportSelector.class)
+//@Import(MyImportSelector.class)
+@Import(MyImportBeanDefinitionRegistrar.class)
 public class Appconfig {
 
 	/*
