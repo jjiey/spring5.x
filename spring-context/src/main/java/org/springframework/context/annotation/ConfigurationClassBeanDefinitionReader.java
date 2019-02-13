@@ -224,8 +224,6 @@ class ConfigurationClassBeanDefinitionReader {
 			beanDef.setFactoryMethodName(methodName);
 		}
 		else {
-
-
 			// instance @Bean method
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);

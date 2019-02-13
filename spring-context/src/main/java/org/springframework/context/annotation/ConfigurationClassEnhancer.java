@@ -268,6 +268,7 @@ class ConfigurationClassEnhancer {
 				currentThread.setContextClassLoader(this.classLoader);
 			}
 			try {
+				// 可以自己测试 在这里操作这个字节码super.generate(cg)
 				return super.generate(cg);
 			}
 			finally {
@@ -336,7 +337,7 @@ class ConfigurationClassEnhancer {
 		public Object intercept(Object enhancedConfigInstance, Method beanMethod, Object[] beanMethodArgs,
 					MethodProxy cglibMethodProxy) throws Throwable {
 
-			//enhancedConfigInstance 代理
+			// enhancedConfigInstance：代理代理
 			// 通过enhancedConfigInstance中cglib生成的成员变量$$beanFactory获得beanFactory。
 			ConfigurableBeanFactory beanFactory = getBeanFactory(enhancedConfigInstance);
 
