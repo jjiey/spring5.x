@@ -117,6 +117,9 @@ final class PostProcessorRegistrationDelegate {
 
 			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
 			// 因为ConfigurationClassPostProcessor implements PriorityOrdered，所以
+			/**
+			 * 应该是防止invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry)的过程当中又加了一些新的，因为next代码判断了执行过的里面不包含ppName，就把它执行一遍。因为上边就没有判断拿出来就执行了，processedBeans是上边第一次拿出来的，然后下边又拿了一次，看第一次拿的里面包不包含它，如果不包含就再执行一遍；不就是为了看是不是有新的加入进来了（不明白为什么这么做）
+			 */
 			postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (!processedBeans.contains(ppName) && beanFactory.isTypeMatch(ppName, Ordered.class)) {
@@ -130,6 +133,9 @@ final class PostProcessorRegistrationDelegate {
 			currentRegistryProcessors.clear();
 
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
+			/**
+			 * Finally应该和next差不多
+			 */
 			boolean reiterate = true;
 			while (reiterate) {
 				reiterate = false;
@@ -148,20 +154,19 @@ final class PostProcessorRegistrationDelegate {
 			}
 
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
-			//执行BeanFactoryPostProcessor的回调，这是执行的是postProcessBeanFactory（子类也需要执行父类的方法）
-			//前面执行的是BeanFactoryPostProcessor的子类BeanDefinitionRegistryPostProcessor的回调，前面执行的是postProcessBeanDefinitionRegistry
+			// 前面执行的是BeanFactoryPostProcessor的子类BeanDefinitionRegistryPostProcessor中的方法postProcessBeanDefinitionRegistry
+			// 这里执行的是BeanFactoryPostProcessor的子类BeanDefinitionRegistryPostProcessor中的方法postProcessBeanFactory（子类也需要执行父类的方法）（在这里会有cglib代理，里边会解释full和lite）
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
-			//自定义BeanFactoryPostProcessor
+			// 这里执行的是自定义实现BeanFactoryPostProcessor接口的子类中中的方法postProcessBeanFactory
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
-		}
-		else {
+		} else {
 			// Invoke factory processors registered with the context instance.
 			invokeBeanFactoryPostProcessors(beanFactoryPostProcessors, beanFactory);
 		}
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let the bean factory post-processors apply to them!
-		//ConfigurationClassPostProcessor
+		// 防止在上边的处理过程当中又添加了新的BeanFactoryPostProcessor
 		String[] postProcessorNames =
 				beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false);
 
@@ -171,16 +176,14 @@ final class PostProcessorRegistrationDelegate {
 		List<String> orderedPostProcessorNames = new ArrayList<>();
 		List<String> nonOrderedPostProcessorNames = new ArrayList<>();
 		for (String ppName : postProcessorNames) {
+			// 如果processedBeans里包含，跳过，再往下的代码执行起来也没有意义了
 			if (processedBeans.contains(ppName)) {
 				// skip - already processed in first phase above
-			}
-			else if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
+			} else if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
 				priorityOrderedPostProcessors.add(beanFactory.getBean(ppName, BeanFactoryPostProcessor.class));
-			}
-			else if (beanFactory.isTypeMatch(ppName, Ordered.class)) {
+			} else if (beanFactory.isTypeMatch(ppName, Ordered.class)) {
 				orderedPostProcessorNames.add(ppName);
-			}
-			else {
+			} else {
 				nonOrderedPostProcessorNames.add(ppName);
 			}
 		}
@@ -206,6 +209,7 @@ final class PostProcessorRegistrationDelegate {
 
 		// Clear cached merged bean definitions since the post-processors might have
 		// modified the original metadata, e.g. replacing placeholders in values...
+		// 最后清除一下缓存
 		beanFactory.clearMetadataCache();
 	}
 

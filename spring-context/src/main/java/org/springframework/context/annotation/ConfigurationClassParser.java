@@ -325,6 +325,7 @@ class ConfigurationClassParser {
 		 *
 		 * 这里和内部递归调用时候的情况不同
 		 */
+		// getImports(sourceClass)拿到里边的xxx.class
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations
@@ -346,7 +347,6 @@ class ConfigurationClassParser {
 		}
 
 		// Process default methods on interfaces
-
 		processInterfaces(configClass, sourceClass);
 
 		// Process superclass, if any
@@ -662,7 +662,8 @@ class ConfigurationClassParser {
 					} else {
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
-						// 否则，加入到importStack后调用processConfigurationClass进行处理
+						// 这里是递归终止条件
+						// 调用processConfigurationClass进行处理
 						// processConfigurationClass里面主要就是把类放到list（configurationClasses）中，然后会在后面拿出来解析成bd继而注册
 						// 可以看到：如果是普通类，在扫描出来的时候就被注册了；如果是importSelector，会先放到configurationClasses后面进行出来注册
 						this.importStack.registerImport(

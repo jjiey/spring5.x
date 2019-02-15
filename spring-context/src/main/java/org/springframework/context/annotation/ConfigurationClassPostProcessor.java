@@ -252,8 +252,14 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			// Simply call processConfigurationClasses lazily at this point then.
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
-		//给配置类产生cglib代理
-		//为什么需要产生cglib代理？
+		// 给配置类产生cglib代理
+		/**
+		 * 1.为什么需要产生cglib代理？
+		 * 为了维护产生的配置类当中的bean的作用域，scope等等
+		 * 1.1先考虑full和lite的关系：full和lite是spring中的一个标识，标识为full的类标识它是一个全配置类，spring为全配置类生成bean的时候会加上cglib代理；标识为lite的类标识它是一个部分配置类，spring会放一个原生的类进去，接下来参考ConfigurationClassEnhancer.newEnhancer方法中的注释3.1
+		 * 2.这里为什么要用cglib，不用jdk动态代理？
+		 * 因为jdk动态代理是基于接口的，AppConfig不一定是有接口
+		 */
 		enhanceConfigurationClasses(beanFactory);
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
@@ -400,6 +406,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	}
 
 	/**
+	 * 说白了一句话，加了@Configuration，它会进行cglib代理，如果没加，就不会进行cglib代理
 	 * Post-processes a BeanFactory in search of Configuration class BeanDefinitions;
 	 * any candidates are then enhanced by a {@link ConfigurationClassEnhancer}.
 	 * Candidate status is determined by BeanDefinition attribute metadata.
@@ -409,8 +416,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		Map<String, AbstractBeanDefinition> configBeanDefs = new LinkedHashMap<>();
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
-			//判断是否是一个全注解类
-			//扫描是全注解类？full和lite的关系
+			// 判断是否是一个全注解类？理解full和lite的关系
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef)) {
 				if (!(beanDef instanceof AbstractBeanDefinition)) {
 					throw new BeanDefinitionStoreException("Cannot enhance @Configuration bean definition '" +
@@ -427,9 +433,15 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		}
 		if (configBeanDefs.isEmpty()) {
 			// nothing to enhance -> return immediately
+			/**
+			 * 如果appconfig里没加@Configuration注解，程序就会在这里return，不会进行下边的cglib代理
+			 */
 			return;
 		}
 
+		/**
+		 * 如果appconfig里加了@Configuration注解，程序就会继续往下走，在下边进行cglib代理
+		 */
 		ConfigurationClassEnhancer enhancer = new ConfigurationClassEnhancer();
 		for (Map.Entry<String, AbstractBeanDefinition> entry : configBeanDefs.entrySet()) {
 			AbstractBeanDefinition beanDef = entry.getValue();
@@ -439,7 +451,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				// Set enhanced subclass of the user-specified bean class
 				Class<?> configClass = beanDef.resolveBeanClass(this.beanClassLoader);
 				if (configClass != null) {
-					//完成对全注解类的cglib代理
+					// 完成对全注解类的cglib代理
+					// appconfig在这里变成一个cglib的class，然后变成bd，最后变成bean
 					Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
 					if (configClass != enhancedClass) {
 						if (logger.isDebugEnabled()) {

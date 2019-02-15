@@ -140,7 +140,7 @@ class ConfigurationClassBeanDefinitionReader {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
 
-		// @Bean，在这里完成注册
+		// @Bean，在这里完成注册（里边有个static的判断）
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
@@ -220,11 +220,16 @@ class ConfigurationClassBeanDefinitionReader {
 
 		if (metadata.isStatic()) {
 			// static @Bean method
+			/**
+			 * （如果是static）里边放的是一个bean，名字是configClass.getMetadata().getClassName()，通过调用方法来创建时，这个时候的方法已经过滤不到了，因为产生的不再是一个beanFactory（后面讲bean实例化会讲到）
+			 */
 			beanDef.setBeanClassName(configClass.getMetadata().getClassName());
 			beanDef.setFactoryMethodName(methodName);
-		}
-		else {
+		} else {
 			// instance @Bean method
+			/**
+			 * （如果不是static）bd当中放的是一个factoryBean，factoryBean通过setUniqueFactoryMethodName这个对象new出来给它，通过methodName去调用这个方法，我们知道调用这个方法的时候，这个方法会被进行代理，所以只会产生一遍（后面讲bean实例化会讲到）
+			 */
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}
