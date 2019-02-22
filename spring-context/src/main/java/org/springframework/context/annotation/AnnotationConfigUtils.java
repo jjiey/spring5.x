@@ -180,14 +180,14 @@ public class AnnotationConfigUtils {
 		}
 
 		if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
-			// AutowiredAnnotationBeanPostProcessor 实现了 MergedBeanDefinitionPostProcessor
-			// MergedBeanDefinitionPostProcessor 最终实现了 BeanPostProcessor
+			// 往bdmap中添加bean后置处理器AutowiredAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor extends BeanPostProcessor
 			RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
 		if (!registry.containsBeanDefinition(REQUIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+			// 往bdmap中添加bean后置处理器RequiredAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor extends BeanPostProcessor
 			RootBeanDefinition def = new RootBeanDefinition(RequiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, REQUIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
@@ -195,6 +195,7 @@ public class AnnotationConfigUtils {
 
 		// Check for JSR-250 support, and if present add the CommonAnnotationBeanPostProcessor.
 		if (jsr250Present && !registry.containsBeanDefinition(COMMON_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+			// 往bdmap中添加bean后置处理器CommonAnnotationBeanPostProcessor implements InstantiationAwareBeanPostProcessor extends BeanPostProcessor
 			RootBeanDefinition def = new RootBeanDefinition(CommonAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, COMMON_ANNOTATION_PROCESSOR_BEAN_NAME));

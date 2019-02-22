@@ -659,8 +659,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
-		// 添加一个后置管理器ApplicationContextAwareProcessor
-		// ApplicationContextAwareProcessor implements BeanPostProcessor
+		// 直接往工厂中添加bean后置管理器ApplicationContextAwareProcessor implements BeanPostProcessor
 		// 能够在bean中获得到各种*Aware（*Aware都有其作用）
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 
@@ -681,7 +680,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.registerResolvableDependency(ApplicationContext.class, this);
 
 		// Register early post-processor for detecting inner beans as ApplicationListeners.
-		// ApplicationListenerDetector后置处理器（自行百度）
+		// 直接往工厂添加bean后置处理器ApplicationListenerDetector（自行百度作用）implements MergedBeanDefinitionPostProcessor extends BeanPostProcessor
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found.
