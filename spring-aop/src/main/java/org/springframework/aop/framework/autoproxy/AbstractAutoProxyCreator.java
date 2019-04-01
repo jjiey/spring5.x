@@ -454,8 +454,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (!proxyFactory.isProxyTargetClass()) {
 			if (shouldProxyTargetClass(beanClass, beanName)) {
 				proxyFactory.setProxyTargetClass(true);
-			}
-			else {
+			} else {
 				evaluateProxyInterfaces(beanClass, proxyFactory);
 			}
 		}

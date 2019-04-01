@@ -60,8 +60,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
 		// Don't override the class with CGLIB if no overrides.
-		//检测 bean 配置中是否配置了 lookup-method 或 replace-method
-		//如果配置了就需使用 CGLIB 构建 bean 对象
+		// 检测bean配置中是否配置了lookup-method或replace-method，如果配置了就需使用CGLIB构建bean对象
 		if (!bd.hasMethodOverrides()) {
 			Constructor<?> constructorToUse;
 			synchronized (bd.constructorArgumentLock) {
@@ -75,20 +74,17 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 						if (System.getSecurityManager() != null) {
 							constructorToUse = AccessController.doPrivileged(
 									(PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
-						}
-						else {
+						} else {
 							constructorToUse =	clazz.getDeclaredConstructor();
 						}
 						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
-					}
-					catch (Throwable ex) {
+					} catch (Throwable ex) {
 						throw new BeanInstantiationException(clazz, "No default constructor found", ex);
 					}
 				}
 			}
 			return BeanUtils.instantiateClass(constructorToUse);
-		}
-		else {
+		} else {
 			// Must generate CGLIB subclass.
 			return instantiateWithMethodInjection(bd, beanName, owner);
 		}

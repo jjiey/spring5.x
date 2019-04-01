@@ -71,14 +71,14 @@ import org.springframework.util.StringUtils;
 public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
 
 	/** Cache of singleton objects: bean name --> bean instance */
-	//用于存放完全初始化好的 bean从该缓存中取出的 bean可以直接使用
+	// 用于存放完全初始化好的bean，从该缓存中取出的bean可以直接使用
 	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
 	/** Cache of singleton factories: bean name --> ObjectFactory */
-	//存放 bean工厂对象解决循环依赖
+	// 存放bean工厂对象解决循环依赖
 	private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16);
 
-	//存放原始的bean对象用于解决循环依赖,注意：存到里面的对象还没有被填充属性
+	// 存放原始的bean对象用于解决循环依赖，注意：存到里面的对象还没有被填充属性
 	/** Cache of early singleton objects: bean name --> bean instance */
 	private final Map<String, Object> earlySingletonObjects = new HashMap<>(16);
 
@@ -177,8 +177,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
-		//从map中获取bean如果不为空直接返回，不再进行初始化工作
-		//讲道理一个程序员提供的对象这里一般都是为空的
+		// 从map中获取bean如果不为空直接返回，不再进行初始化工作
+		// 讲道理如果是程序员提供的对象在这里一般都是为空的
 		Object singletonObject = this.singletonObjects.get(beanName);
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			synchronized (this.singletonObjects) {
@@ -217,10 +217,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				/**
-				 * 将beanName添加到singletonsCurrentlyInCreation这样一个set集合中
-				 * 表示beanName对应的bean正在创建中
-				 */
+				// 将beanName添加到singletonsCurrentlyInCreation这样一个set集合中，表示beanName对应的bean正在创建中
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
 				boolean recordSuppressedExceptions = (this.suppressedExceptions == null);
@@ -230,28 +227,25 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				try {
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
-				}
-				catch (IllegalStateException ex) {
+				} catch (IllegalStateException ex) {
 					// Has the singleton object implicitly appeared in the meantime ->
 					// if yes, proceed with it since the exception indicates that state.
 					singletonObject = this.singletonObjects.get(beanName);
 					if (singletonObject == null) {
 						throw ex;
 					}
-				}
-				catch (BeanCreationException ex) {
+				} catch (BeanCreationException ex) {
 					if (recordSuppressedExceptions) {
 						for (Exception suppressedException : this.suppressedExceptions) {
 							ex.addRelatedCause(suppressedException);
 						}
 					}
 					throw ex;
-				}
-				finally {
+				} finally {
 					if (recordSuppressedExceptions) {
 						this.suppressedExceptions = null;
 					}
-					//把标识为正在创建的标识去掉
+					// 把标识为正在创建的标识去掉
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {

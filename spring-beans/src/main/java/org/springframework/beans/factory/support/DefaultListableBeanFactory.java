@@ -747,19 +747,22 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		if (logger.isDebugEnabled()) {
 			logger.debug("Pre-instantiating singletons in " + this);
 		}
-		//所有bean的名字
+
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		// 所有bean的名字
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
 		// 触发所有非延迟加载单例beans的初始化，主要步骤为调用getBean
 		for (String beanName : beanNames) {
-			//合并父BeanDefinition
+			// 合并父BeanDefinition
+			// 这句源码不往下读了，因为它的作用只有在xml中才会这么写，迄今为止的springboot中这种写法都看不到了
+			// 如果面试中就说spring会把父类这两个BeanDefinition进行合并，有就合并，没有就拿出来
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
 				if (isFactoryBean(beanName)) {
-					//如果是FactoryBean则加上&
+					// 如果是FactoryBean则加上&
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						final FactoryBean<?> factory = (FactoryBean<?>) bean;
@@ -768,8 +771,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							isEagerInit = AccessController.doPrivileged((PrivilegedAction<Boolean>)
 											((SmartFactoryBean<?>) factory)::isEagerInit,
 									getAccessControlContext());
-						}
-						else {
+						} else {
 							isEagerInit = (factory instanceof SmartFactoryBean &&
 									((SmartFactoryBean<?>) factory).isEagerInit());
 						}
@@ -777,8 +779,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							getBean(beanName);
 						}
 					}
-				}
-				else {
+				} else {
 					getBean(beanName);
 				}
 			}
@@ -794,8 +795,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						smartSingleton.afterSingletonsInstantiated();
 						return null;
 					}, getAccessControlContext());
-				}
-				else {
+				} else {
 					smartSingleton.afterSingletonsInstantiated();
 				}
 			}
