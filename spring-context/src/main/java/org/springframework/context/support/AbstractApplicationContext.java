@@ -527,7 +527,6 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
-
 				// 这个方法在当前版本的spring是没用任何代码的，可能spring期待在后面的版本中去扩展吧
 				postProcessBeanFactory(beanFactory);
 
@@ -559,13 +558,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
+				// 翻译：实例化所有剩余的(非惰性初始化)单例。
+				// 什么是剩余的单例对象？spring当中有很多单例对象，有的是spring自己提供的，比如beanPostProcess等，spring将程序员自己提供的比如service、dao等称之为剩余的单例
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
 				finishRefresh();
-			}
-
-			catch (BeansException ex) {
+			} catch (BeansException ex) {
 				if (logger.isWarnEnabled()) {
 					logger.warn("Exception encountered during context initialization - " +
 							"cancelling refresh attempt: " + ex);
@@ -579,9 +578,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Propagate exception to caller.
 				throw ex;
-			}
-
-			finally {
+			} finally {
 				// Reset common introspection caches in Spring's core, since we
 				// might not ever need metadata for singleton beans anymore...
 				resetCommonCaches();

@@ -260,60 +260,75 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		}
 
 		// Quick check on the concurrent map first, with minimal locking.
+		// 先查找缓存
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
+		// 如果缓存中有直接返回，没有继续执行
 		if (candidateConstructors == null) {
 			// Fully synchronized resolution now...
+			// 同步此方法
 			synchronized (this.candidateConstructorsCache) {
 				candidateConstructors = this.candidateConstructorsCache.get(beanClass);
+				// 双重判断，避免多线程并发问题
 				if (candidateConstructors == null) {
 					Constructor<?>[] rawCandidates;
 					try {
-						// 获取此Bean的所有构造器
+						// 获取当前类的所有构造器
 						rawCandidates = beanClass.getDeclaredConstructors();
 					} catch (Throwable ex) {
 						throw new BeanCreationException(beanName,
 								"Resolution of declared constructors on bean Class [" + beanClass.getName() +
 								"] from ClassLoader [" + beanClass.getClassLoader() + "] failed", ex);
 					}
-					// 最终适用的构造器集合
+					// 最终适用的构造器集合，spring最终会使用放到candidates这个list里的构造方法，所以往这个list里扔才会有作用
 					List<Constructor<?>> candidates = new ArrayList<>(rawCandidates.length);
 					// 存放依赖注入的required=true的构造器
 					Constructor<?> requiredConstructor = null;
-					// 存放默认构造器
+					// 存放默认构造器，其实作用不是很大，只是标记了无参构造方法，但是如果在默认构造方法上加上注解的话就会用默认的
 					Constructor<?> defaultConstructor = null;
+					// primary的构造方法，源码里用了KotlinDetector，不懂，应该是如果在spring里采用这种语法去标注了一个primary构造方法，那就会把它找出来（了解，应该很少用）
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
+					// 不是合成的构造器。synthetic：合成
 					int nonSyntheticConstructors = 0;
 					for (Constructor<?> candidate : rawCandidates) {
+						// 几乎很多类，比如java反射提供的那几个类，比如Field，Class，Construct，Method都有这个犯法，这个方法的意思是：判断当前这个构造方法或者这个属性或者这个方法或者这个类是不是一个混合类。什么是混合类？混合构造方法？
 						if (!candidate.isSynthetic()) {
 							nonSyntheticConstructors++;
 						} else if (primaryConstructor != null) {
 							continue;
 						}
-						// 获取构造器的注解
+						// 查找当前构造器上的注解，其实找的是@Autowired和@Value两个注解
 						AnnotationAttributes ann = findAutowiredAnnotation(candidate);
+						// 如果没有注解
 						if (ann == null) {
+							// 获取当前构造方法所在的类，如果当前类已经是（cglib？）代理类则返回它的父类
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
+							// 判断当前构造方法所在的类和现在要解析的类是不是同一个类
 							if (userClass != beanClass) {
 								try {
+									// 获取当前类父类的所有构造器
 									Constructor<?> superCtor =
 											userClass.getDeclaredConstructor(candidate.getParameterTypes());
+									// 查找当前类父类构造器上的注解，其实找的是@Autowired和@Value两个注解，同上
 									ann = findAutowiredAnnotation(superCtor);
 								} catch (NoSuchMethodException ex) {
 									// Simply proceed, no equivalent superclass constructor found...
 								}
 							}
 						}
+						// 如果有注解
 						if (ann != null) {
-							// 如果已经存在一个required=true的构造器了，抛出异常
+							// 说明已经存在一个required=true的构造器了。如果已经有一个true，另一个不管是true或false都会抛异常
 							if (requiredConstructor != null) {
 								throw new BeanCreationException(beanName,
 										"Invalid autowire-marked constructor: " + candidate +
 										". Found constructor with 'required' Autowired annotation already: " +
 										requiredConstructor);
 							}
-							// 判断此注解上的required属性
+							// 获取此注解上的required属性值
 							boolean required = determineRequiredStatus(ann);
+							// 如果为true
 							if (required) {
+								// 说明已经存在一个false，而且再有true就会抛异常
 								if (!candidates.isEmpty()) {
 									throw new BeanCreationException(beanName,
 											"Invalid autowire-marked constructors: " + candidates +
@@ -325,17 +340,19 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 							}
 							// 加入适用的构造器集合中
 							candidates.add(candidate);
-						} else if (candidate.getParameterCount() == 0) { // 再判断构造函数上的参数个数是否为0
-							// 如果没有参数，就是默认构造器
+						} else if (candidate.getParameterCount() == 0) { // 如果该构造函数上没有注解，再判断构造函数上的参数个数是否为0
+							// 如果没有参数，就是默认构造器，赋值给defaultConstructor
 							defaultConstructor = candidate;
 						}
 					}
-					if (!candidates.isEmpty()) { // 适用的构造器集合若不为空
+					// 循环结束，适用的构造器集合如果不为空
+					if (!candidates.isEmpty()) {
 						// Add default constructor to list of optional constructors, as fallback.
 						// 如果没有required=true的构造器
 						if (requiredConstructor == null) {
 							if (defaultConstructor != null) {
 								// 将默认构造器加入适用构造器集合
+								// 说明有一个或者多个false的其他构造器
 								candidates.add(defaultConstructor);
 							} else if (candidates.size() == 1 && logger.isWarnEnabled()) {
 								logger.warn("Inconsistent constructor declaration on bean with name '" + beanName +

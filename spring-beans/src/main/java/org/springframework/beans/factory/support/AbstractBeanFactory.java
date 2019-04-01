@@ -326,8 +326,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						registerDependentBean(dep, beanName);
 						try {
 							getBean(dep);
-						}
-						catch (NoSuchBeanDefinitionException ex) {
+						} catch (NoSuchBeanDefinitionException ex) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"'" + beanName + "' depends on missing bean '" + dep + "'", ex);
 						}
@@ -354,8 +353,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					try {
 						beforePrototypeCreation(beanName);
 						prototypeInstance = createBean(beanName, mbd, args);
-					}
-					finally {
+					} finally {
 						afterPrototypeCreation(beanName);
 					}
 					bean = getObjectForBeanInstance(prototypeInstance, name, beanName, mbd);
@@ -397,8 +395,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					throw new BeanNotOfRequiredTypeException(name, requiredType, bean.getClass());
 				}
 				return convertedBean;
-			}
-			catch (TypeMismatchException ex) {
+			} catch (TypeMismatchException ex) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Failed to convert bean '" + name + "' to required type '" +
 							ClassUtils.getQualifiedName(requiredType) + "'", ex);
@@ -1703,6 +1700,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	protected void registerDisposableBeanIfNecessary(String beanName, Object bean, RootBeanDefinition mbd) {
 		AccessControlContext acc = (System.getSecurityManager() != null ? getAccessControlContext() : null);
+		// new DisposableBeanAdapter(bean, beanName, mbd, getBeanPostProcessors(), acc)对象里注册了第九个后置处理器
 		if (!mbd.isPrototype() && requiresDestruction(bean, mbd)) {
 			if (mbd.isSingleton()) {
 				// Register a DisposableBean implementation that performs all destruction
@@ -1710,8 +1708,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// DisposableBean interface, custom destroy method.
 				registerDisposableBean(beanName,
 						new DisposableBeanAdapter(bean, beanName, mbd, getBeanPostProcessors(), acc));
-			}
-			else {
+			} else {
 				// A bean with a custom scope...
 				Scope scope = this.scopes.get(mbd.getScope());
 				if (scope == null) {
