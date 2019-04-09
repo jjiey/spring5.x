@@ -33,11 +33,11 @@ public class ProxyConfig implements Serializable {
 	/** use serialVersionUID from Spring 1.2 for interoperability */
 	private static final long serialVersionUID = -8409359707199703185L;
 
-
+	// 可以通过xml去配置为true和false，注解方式暂时还没找到办法配置，这个值默认是false
 	private boolean proxyTargetClass = false;
-
+	// 可以通过@EnableAspectJAutoProxy(proxyTargetClass = true/false)配置
 	private boolean optimize = false;
-
+	// 怎么设置？todo
 	boolean opaque = false;
 
 	boolean exposeProxy = false;

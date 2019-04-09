@@ -71,7 +71,7 @@ import org.springframework.util.StringUtils;
 public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
 
 	/** Cache of singleton objects: bean name --> bean instance */
-	// 用于存放完全初始化好的bean，从该缓存中取出的bean可以直接使用
+	// spring单例池，用于存放完全初始化好的bean，从该缓存中取出的bean可以直接使用
 	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
 	/** Cache of singleton factories: bean name --> ObjectFactory */
@@ -177,16 +177,18 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
-		// 从map中获取bean如果不为空直接返回，不再进行初始化工作
-		// 讲道理如果是程序员提供的对象在这里一般都是为空的
+		// 从单例池中获取bean，如果获取到直接返回，不再进行初始化工作
 		Object singletonObject = this.singletonObjects.get(beanName);
+		// 如果单例池里没有而且这个bean正在创建中（在singletonsCurrentlyInCreation Set里则表明正在创建中）
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			synchronized (this.singletonObjects) {
 				singletonObject = this.earlySingletonObjects.get(beanName);
 				if (singletonObject == null && allowEarlyReference) {
+					// singletonFactories是用来解决循环依赖的，spring创建出一个对象（还没有实例化完成）就会把这个对象放到singletonFactories里
 					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 					if (singletonFactory != null) {
 						singletonObject = singletonFactory.getObject();
+						// earlySingletonObjects只有这里put了
 						this.earlySingletonObjects.put(beanName, singletonObject);
 						this.singletonFactories.remove(beanName);
 					}

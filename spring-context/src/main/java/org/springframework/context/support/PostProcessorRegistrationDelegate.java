@@ -335,8 +335,7 @@ final class PostProcessorRegistrationDelegate {
 	 * BeanPostProcessor that logs an info message when a bean is created during
 	 * BeanPostProcessor instantiation, i.e. when a bean is not eligible for
 	 * getting processed by all BeanPostProcessors.
-	 * 当Spring的配置中的后置处理器还没有被注册就已经开始了bean的初始化
-	 *	便会打印出BeanPostProcessorChecker中设定的信息
+	 * 当Spring的配置中的后置处理器还没有被注册就已经开始了bean的初始化，便会打印出BeanPostProcessorChecker中设定的信息
 	 */
 	private static final class BeanPostProcessorChecker implements BeanPostProcessor {
 
@@ -348,6 +347,7 @@ final class PostProcessorRegistrationDelegate {
 
 		public BeanPostProcessorChecker(ConfigurableListableBeanFactory beanFactory, int beanPostProcessorTargetCount) {
 			this.beanFactory = beanFactory;
+			// 怎么检查？比较后置处理器的数量 和 当前执行过的后置处理器的数量，不一致就报错
 			this.beanPostProcessorTargetCount = beanPostProcessorTargetCount;
 		}
 

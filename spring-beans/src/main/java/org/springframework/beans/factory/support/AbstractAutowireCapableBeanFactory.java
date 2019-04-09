@@ -430,6 +430,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		Object result = existingBean;
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
+			// 在这里处理AOP，当processor为AnnotationAwareAspectJAutoProxyCreator时执行完之后变成了代理对象
 			Object current = processor.postProcessAfterInitialization(result, beanName);
 			if (current == null) {
 				return result;
@@ -568,8 +569,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					 * MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition
 					 */
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
-				}
-				catch (Throwable ex) {
+				} catch (Throwable ex) {
 					throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 							"Post-processing of merged bean definition failed", ex);
 				}
@@ -1768,6 +1768,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (mbd == null || !mbd.isSynthetic()) {
 			/**
 			 * 第八次执行后置处理器
+			 * 这里边真正处理了AOP
 			 * BeanPostProcessor.postProcessAfterInitialization
 			 */
 			// 执行后置处理器的after方法

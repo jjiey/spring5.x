@@ -243,12 +243,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
 		/**
-		 * 通过name获取beanName。这里不使用name直接作为beanName有两个原因
-		 * 1、name可能会以&字符开头，表明调用者想获取FactoryBean本身，而非FactoryBean实现类所创建的bean。
-		 * 在BeanFactory中，FactoryBean的实现类和其他的bean存储方式是一致的，即<beanName, bean>，beanName中是没有&这个字符的。
-		 * 所以我们需要将name的首字符&移除，这样才能从缓存里取到FactoryBean实例。
-		 * 2、还是别名的问题，转换需要
-		 * &beanName
+		 * 通过name获取beanName。这里不直接使用name直接作为beanName有两个原因：
+		 * 1.name可能会以&字符开头，即&beanName，表明调用者想获取FactoryBean本身，而非FactoryBean实现类所创建的bean
+		 * 在BeanFactory中，FactoryBean的实现类和其他的bean存储方式是一致的，即<beanName, bean>，beanName中是没有&这个字符的，所以我们需要将name的首字符&移除，这样才能从缓存里取到FactoryBean实例。
+		 * 2.如果有别名，需要转换别名
 		 */
 		final String beanName = transformedBeanName(name);
 		Object bean;
@@ -256,16 +254,14 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// Eagerly check singleton cache for manually registered singletons.
 		/**
 		 * 这个方法在初始化的时候会调用，在getBean的时候也会调用，为什么需要这么做呢？
-		 * 也就是说spring在初始化的时候先获取这个对象，判断这个对象是否被实例化好了(普通情况下绝对为空====有一种情况可能不为空)
-		 * 从spring的bean容器中获取一个bean，由于spring中bean容器是一个map（singletonObjects），所以可以理解getSingleton(beanName)等于beanMap.get(beanName)
+		 * 也就是说spring在初始化的时候先获取这个对象，判断这个对象是否被实例化好了
+		 * 从spring的单例池中获取bean，由于spring中单例池是一个map（singletonObjects），所以可以理解getSingleton(beanName)相当于beanMap.get(beanName)
 		 * 由于方法会在spring环境初始化的时候（就是对象被创建的时候调用一次）调用一次，还会在getBean的时候调用一次，所以再调试的时候需要特别注意，不能直接断点在这里，需要先进入到annotationConfigApplicationContext.getBean(IndexDao.class)，之后再来断点，这样就确保了我们是在获取这个bean的时候调用的
 		 * 需要说明的是在初始化时候调用一般都是返回null
-		 *
-		 * lazy
 		 */
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
-			// 这里的判断代码是对于日志的记录，方便我们以后阅读应该注释，不影响spring功能
+			// 这里的判断代码是对于日志的记录，方便我们以后阅读，应该注释，不影响spring功能
 			if (logger.isDebugEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
 					logger.debug("Returning eagerly cached instance of singleton bean '" + beanName +
@@ -284,7 +280,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		} else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
-			// 判断原型，如果是原型的不应该在初始化的时候创建
+			// 判断是否是原型的，如果是原型的不应该在初始化的时候创建
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
@@ -307,7 +303,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			if (!typeCheckOnly) {
-				// 添加到alreadyCreated set集合当中，表示他已经创建过一次
+				// 添加到alreadyCreated Set<String>集合当中，表示已经创建过一次
 				markBeanAsCreated(beanName);
 			}
 
@@ -1380,19 +1376,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			if (System.getSecurityManager() != null) {
 				return AccessController.doPrivileged((PrivilegedExceptionAction<Class<?>>) () ->
 					doResolveBeanClass(mbd, typesToMatch), getAccessControlContext());
-			}
-			else {
+			} else {
 				return doResolveBeanClass(mbd, typesToMatch);
 			}
-		}
-		catch (PrivilegedActionException pae) {
+		} catch (PrivilegedActionException pae) {
 			ClassNotFoundException ex = (ClassNotFoundException) pae.getException();
 			throw new CannotLoadBeanClassException(mbd.getResourceDescription(), beanName, mbd.getBeanClassName(), ex);
-		}
-		catch (ClassNotFoundException ex) {
+		} catch (ClassNotFoundException ex) {
 			throw new CannotLoadBeanClassException(mbd.getResourceDescription(), beanName, mbd.getBeanClassName(), ex);
-		}
-		catch (LinkageError err) {
+		} catch (LinkageError err) {
 			throw new CannotLoadBeanClassException(mbd.getResourceDescription(), beanName, mbd.getBeanClassName(), err);
 		}
 	}
