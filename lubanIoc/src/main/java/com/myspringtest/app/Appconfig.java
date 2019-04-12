@@ -10,7 +10,7 @@ import org.springframework.context.annotation.*;
 @ComponentScan({"com.myspringtest"})
 //@Import(MyImportSelector.class)
 @Import(MyImportBeanDefinitionRegistrar.class)
-@EnableAspectJAutoProxy
+//@EnableAspectJAutoProxy
 public class Appconfig {
 
 	/*

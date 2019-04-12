@@ -260,7 +260,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		}
 
 		// Quick check on the concurrent map first, with minimal locking.
-		// 先查找缓存
+		// 先查找缓存，为什么从缓存里拿？比如写了两遍refresh方法...
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 		// 如果缓存中有直接返回，没有继续执行
 		if (candidateConstructors == null) {
@@ -287,7 +287,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 					Constructor<?> defaultConstructor = null;
 					// primary的构造方法，源码里用了KotlinDetector，不懂，应该是如果在spring里采用这种语法去标注了一个primary构造方法，那就会把它找出来（了解，应该很少用）
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
-					// 不是合成的构造器。synthetic：合成
+					// 不是合成的构造器。synthetic：合成，合成的
 					int nonSyntheticConstructors = 0;
 					for (Constructor<?> candidate : rawCandidates) {
 						// 几乎很多类，比如java反射提供的那几个类，比如Field，Class，Construct，Method都有这个犯法，这个方法的意思是：判断当前这个构造方法或者这个属性或者这个方法或者这个类是不是一个混合类。什么是混合类？混合构造方法？

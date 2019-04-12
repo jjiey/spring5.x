@@ -567,6 +567,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					/**
 					 * 第三次执行后置处理器
 					 * MergedBeanDefinitionPostProcessor.postProcessMergedBeanDefinition
+					 * 缓存bean当中需要注入的信息到bd里，仅仅是缓存并没有处理
 					 */
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				} catch (Throwable ex) {
@@ -1170,6 +1171,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		/**
 		 * 第二次执行后置处理器
 		 * SmartInstantiationAwareBeanPostProcessor.determineCandidateConstructors
+		 * 推断构造方法
 		 */
 		// Candidate constructors for autowiring?
 		// 查找是否存在候选的自动注入构造器，由后置处理器决定返回哪些构造方法
@@ -1750,7 +1752,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (mbd == null || !mbd.isSynthetic()) {
 			/**
 			 * 第七次执行后置处理器
-			 * 好像在这里处理了PostConstruct
+			 * 在这里处理了PostConstruct
 			 * BeanPostProcessor.postProcessBeforeInitialization
 			 */
 			// 执行后置处理器的befor方法
@@ -1759,6 +1761,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		try {
 			// 执行bean的声明周期回调中的init方法
+			// 在这里处理了afterrPropertiesSet（impl InitializingBean）
 			invokeInitMethods(beanName, wrappedBean, mbd);
 		} catch (Throwable ex) {
 			throw new BeanCreationException(

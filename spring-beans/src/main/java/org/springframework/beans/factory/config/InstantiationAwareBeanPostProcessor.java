@@ -67,6 +67,7 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see #postProcessAfterInstantiation
 	 * @see org.springframework.beans.factory.support.AbstractBeanDefinition#hasBeanClass
+	 * 在bean还没有被实例化之前执行，即不交给spring管理，自己产生然后返回出来（比如有的对象需要返回代理对象，不需要spring产生，就可以使用）
 	 */
 	@Nullable
 	default Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
@@ -87,6 +88,7 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * instances being invoked on this bean instance.
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see #postProcessBeforeInstantiation
+	 * 对象是否要完成依赖注入（属性填充），如果返回true则后边会执行第三个方法
 	 */
 	default boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
 		return true;
@@ -109,6 +111,7 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * PropertyValues instance), or {@code null} to skip property population
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see org.springframework.beans.MutablePropertyValues
+	 * 完成bean的属性注入
 	 */
 	@Nullable
 	default PropertyValues postProcessPropertyValues(
