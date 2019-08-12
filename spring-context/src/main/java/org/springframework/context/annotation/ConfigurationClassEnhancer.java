@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.aop.scope.ScopedProxyFactoryBean;
 import org.springframework.asm.Type;
+import org.springframework.beans.factory.Aware;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -75,9 +76,9 @@ class ConfigurationClassEnhancer {
 
 	// The callbacks to use. Note that these callbacks must be stateless.
 	private static final Callback[] CALLBACKS = new Callback[] {
-			// 增强方法，主要控制bean的作用域，不每一次都去调用new
+			// 增强方法, 主要控制bean的作用域, 不每一次都去调用new
 			new BeanMethodInterceptor(),
-			// 设置一个beanFactory：执行setBeanFactory把beanFactory传给它，即自动注入一个beanFactory给它
+			// 设置一个beanFactory: 执行setBeanFactory把beanFactory传给它, 即自动注入一个beanFactory给它 TODO 好像写的也有一点点不太对
 			new BeanFactoryAwareMethodInterceptor(),
 			// 没干啥
 			NoOp.INSTANCE
@@ -99,12 +100,12 @@ class ConfigurationClassEnhancer {
 	 * @return the enhanced subclass
 	 */
 	public Class<?> enhance(Class<?> configClass, @Nullable ClassLoader classLoader) {
-		// 判断是否被代理过
 		/**
-		 * 怎么判断是否被代理过？
-		 * 判断配置类是否有EnhancedConfiguration这个接口，如果是，那证明被代理过
-		 * 因为从下边的代码中（newEnhancer）可以看到如果被代理过就会产生EnhancedConfiguration这个接口
+		 * 怎么判断是否被代理过?
+		 * 判断当前类是否impl EnhancedConfiguration这个接口, 如果是, 那证明被代理过
+		 * 因为从下边的newEnhancer()源码中可以看到如果被代理过就会impl EnhancedConfiguration这个接口
 		 */
+		// 判断是否被代理过
 		if (EnhancedConfiguration.class.isAssignableFrom(configClass)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug(String.format("Ignoring request to enhance %s as it has " +
@@ -116,7 +117,7 @@ class ConfigurationClassEnhancer {
 			}
 			return configClass;
 		}
-		// 没有被代理cglib代理，newEnhancer进行代理
+		// 没有被代理cglib代理, newEnhancer进行代理
 		Class<?> enhancedClass = createClass(newEnhancer(configClass, classLoader));
 		if (logger.isDebugEnabled()) {
 			logger.debug(String.format("Successfully enhanced %s; enhanced class name is: %s",
@@ -130,34 +131,35 @@ class ConfigurationClassEnhancer {
 	 */
 	private Enhancer newEnhancer(Class<?> configSuperClass, @Nullable ClassLoader classLoader) {
 		Enhancer enhancer = new Enhancer();
-		// 增强父类，地球人都知道cglib是基于继承来的，所以将当前类作为父类 todo 看视频
+		// 增强父类, cglib是基于继承来的, 所以将当前类作为父类
 		enhancer.setSuperclass(configSuperClass);
 		/**
-		 * 1。增强接口，为什么要增强接口?
-		 * 为了让cglib产生的代理当中能够获得到beanFactory
-		 * 2.那么为什么要获取beanFactory？
-		 * 因为这个接口EnhancedConfiguration extends BeanFactoryAware，而BeanFactoryAware里有个方法setBeanFactory(BeanFactory beanFactory)，于是产生的代理对象就会得到我们的beanFactory
-		 * 3.那么为什么要让代理类获得beanfactory？
-		 * 3.1首先考虑一个问题，目标对象中产生的类是原始类，我们这个目标对象（appconfig）如果不使用代理，直接使用它得到原始类行不行得通？
-		 * 行不通，因为原始类包含的是原始方法，比如上边的例子调用indexDao4()，永远给你返回新的对象IndexDao3出来，这样违背了spring中单例的原则，所以这个地方不能用这个原始对象。所以我们要把它变成一个代理对象，代理对象产生出来的就是我们的代理类，代理类肯定可以，因为我代理类里不调这个方法，直接给你返回。所以要把它变成一个代理
-		 * 3.2.问题来了，你变成一个代理类的话，最终怎么返回一个可用的对象，就是一个enableObject？怎么得到一个spring的合理的对象？
-		 * 用factory.getBean()就可以了，所以这里需要让代理类获得beanfactory
-		 * 打个比方，代理类调用indexDao4()，我不再返回IndexDao3对象给你了，只要通过factory.getBean()再spring中拿出spring帮我产生的相应对象即可；即第一遍调用需要new，第二遍调用直接从容器中拿；拿就需要factory，所以代理对象需要得到beanfactory。
-		 * 4.那怎么得到beanfactory？
-		 * spring当中的类是自动注入进来的，所以很简单，直接实现BeanFactoryAware接口就可以了，这种接口会在你实例化对象之前通过后置处理器把你放到里面来
+		 * 1.增强接口，为什么要增强接口EnhancedConfiguration?
+		 * 为了让cglib产生的代理能够获得到beanFactory
+		 * 2.增强接口EnhancedConfiguration为什么能获取到beanFactory?
+		 * 因为这个接口EnhancedConfiguration extends BeanFactoryAware, 而BeanFactoryAware里有个方法setBeanFactory(BeanFactory beanFactory), 于是产生的代理对象就会得到beanFactory
+		 * 3.为什么要让代理类获得beanFactory?
+		 * 3.1首先考虑一个问题, 目标对象中产生的类是原始类, 我们这个目标对象(AppConfig)如果不使用代理，直接使用它得到原始类行不行得通?
+		 * 行不通, 因为原始类包含的是原始方法, 比如上边的例子调用indexDao4(), 永远给你返回新的对象IndexDao3出来, 这样违背了spring中单例的原则, 所以这个地方不能用这个原始对象。所以我们要把它变成一个代理类, 代理类肯定可以, 因为我可以在代理类里不调这个方法, 如果工厂里有直接从工厂返回返回。所以要把它变成一个代理
+		 * 3.2.变成代理类后, 最终怎么返回一个这个可用对象?
+		 * 用factory.getBean()就可以了, 所以这里需要让代理类获得beanFactory
+		 * 打个比方, 代理类调用indexDao4(), 我不再返回IndexDao3对象, 只要通过factory.getBean()从spring中拿出spring已经产生的相应对象即可; 即第一遍调用需要new, 第二遍调用直接从容器中拿; 拿就需要factory, 所以代理对象需要得到beanFactory。
+		 * 4.那怎么得到beanFactory?
+		 * spring当中的类是自动注入进来的, 所以很简单, 直接实现BeanFactoryAware接口就可以了, 这个接口会在你实例化对象之前通过后置处理器把你放到里面来
 		 * EnhancedConfiguration extends BeanFactoryAware extends Aware
 		 */
-		// 便于判断，表示一个类以及被增强了 todo 看视频
-		// 表示代理类实现了EnhancedConfiguration这个接口，上边用这个接口来判断配置类是否被代理过
+		// 便于前边判断, 表示一个类已经被增强了, 表示代理类实现了EnhancedConfiguration这个接口, 前边一开始用这个接口来判断配置类是否被代理过
 		enhancer.setInterfaces(new Class<?>[] {EnhancedConfiguration.class});
-		// 不继承Factory接口
+		// 不继承Factory接口 TODO 写的好像不对
 		enhancer.setUseFactory(false);
 		enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
-		// BeanFactoryAwareGeneratorStrategy是一个自定义的生成策略，cglib生成类的默认策略是DefaultGeneratorStrategy（BeanFactoryAwareGeneratorStrategy extends DefaultGeneratorStrategy）
-		// 主要为生成的cglib类中添加成员变量$$beanFactory，同时基于接口EnhancedConfiguration的父接口BeanFactoryAware中的setBeanFactory方法，设置此变量的值为当前Context中的beanFactory；这样一来我们这个cglib代理的对象就有了beanFactory，有了factory就能获得对象，而不用去通过方法获得对象了，因为通过方法获得对象不能控制器过程 todo 看视频
-		// 该BeanFactory的作用是在this调用时拦截该调用，并直接在beanFactory中获得目标bean
+		/**
+		 * BeanFactoryAwareGeneratorStrategy是一个cglib生成类的策略, cglib生成类的默认策略是DefaultGeneratorStrategy(BeanFactoryAwareGeneratorStrategy extends DefaultGeneratorStrategy)
+		 * 主要为生成的cglib类中添加成员变量$$beanFactory, 同时基于接口EnhancedConfiguration的父接口BeanFactoryAware中的setBeanFactory方法, 设置此变量$$beanFactory的值为BeanFactoryAware中的beanFactory; 这样一来我们这个cglib代理的对象就有了beanFactory, 有了factory就能获得对象, 而不用去通过方法获得对象了, 因为通过方法获得对象不能控制其过程
+		 * 该BeanFactory的作用是在this调用时拦截该调用, 并直接在beanFactory中获得目标bean
+		 */
 		enhancer.setStrategy(new BeanFactoryAwareGeneratorStrategy(classLoader));
-		// 添加了一个方法的过滤器，过滤方法，不能每次都去new
+		// 添加了方法的过滤器去过滤方法, 不能每次都去new对象
 		enhancer.setCallbackFilter(CALLBACK_FILTER);
 		enhancer.setCallbackTypes(CALLBACK_FILTER.getCallbackTypes());
 		return enhancer;
@@ -255,8 +257,8 @@ class ConfigurationClassEnhancer {
 			ClassEmitterTransformer transformer = new ClassEmitterTransformer() {
 				@Override
 				public void end_class() {
-					// 往代理类当中声明了一个属性BEAN_FACTORY_FIELD（$$beanFactory）
-					// 因为代理类需要factory这个属性，所以spring帮你定义了一个属性，名字叫$$beanFactory
+					// 往代理类当中声明了一个属性BEAN_FACTORY_FIELD($$beanFactory)
+					// 因为代理类需要factory这个属性, 所以spring在这里定义了一个名字叫$$beanFactory的属性用来接收BeanFactoryAware里的beanFactory
 					declare_field(Constants.ACC_PUBLIC, BEAN_FACTORY_FIELD, Type.getType(BeanFactory.class), null);
 					super.end_class();
 				}
@@ -274,8 +276,7 @@ class ConfigurationClassEnhancer {
 			ClassLoader threadContextClassLoader;
 			try {
 				threadContextClassLoader = currentThread.getContextClassLoader();
-			}
-			catch (Throwable ex) {
+			} catch (Throwable ex) {
 				// Cannot access thread context ClassLoader - falling back...
 				return super.generate(cg);
 			}
@@ -285,11 +286,10 @@ class ConfigurationClassEnhancer {
 				currentThread.setContextClassLoader(this.classLoader);
 			}
 			try {
-				// 后边ClassWriter操作字节码，生成类出来
-				// 可以自己测试 在这里操作这个字节码super.generate(cg)，生成类
+				// 后边ClassWriter操作字节码, 生成类出来
+				// 可以自己测试 在这里操作这个字节码super.generate(cg), 生成类
 				return super.generate(cg);
-			}
-			finally {
+			} finally {
 				if (overrideClassLoader) {
 					// Reset original thread context ClassLoader.
 					currentThread.setContextClassLoader(threadContextClassLoader);
@@ -355,7 +355,7 @@ class ConfigurationClassEnhancer {
 		public Object intercept(Object enhancedConfigInstance, Method beanMethod, Object[] beanMethodArgs,
 					MethodProxy cglibMethodProxy) throws Throwable {
 
-			// enhancedConfigInstance：代理对象
+			// enhancedConfigInstance: 代理对象
 			// 通过enhancedConfigInstance中cglib生成的成员变量$$beanFactory获得beanFactory。
 			ConfigurableBeanFactory beanFactory = getBeanFactory(enhancedConfigInstance);
 
@@ -377,8 +377,7 @@ class ConfigurationClassEnhancer {
 			// proxy that intercepts calls to getObject() and returns any cached bean instance.
 			// This ensures that the semantics of calling a FactoryBean from within @Bean methods
 			// is the same as that of referring to a FactoryBean within XML. See SPR-6602.
-			// ，BeanFactory.FACTORY_BEAN_PREFIX（&）
-			// 判断appcofig里返回的类是不是一个factoryBean（判断factory中是否有：&beanName 和 beanName）
+			// 判断AppConfig里返回的类是不是一个factoryBean(还要判断factory中是否有: &beanName 和 beanName)
 			if (factoryContainsBean(beanFactory, BeanFactory.FACTORY_BEAN_PREFIX + beanName) &&
 					factoryContainsBean(beanFactory, beanName)) {
 				Object factoryBean = beanFactory.getBean(BeanFactory.FACTORY_BEAN_PREFIX + beanName);
@@ -392,9 +391,11 @@ class ConfigurationClassEnhancer {
 			}
 
 			/**
-			 * 一个非常牛逼的判断，判断到底是要new还是get
-			 * 判断依据：当调用方法和执行方法都是同一个方法时，new；否则，get
-			 * 原理大概是：如果appconfig加了@Configuration，那么spring会产生一个cglib的代理类，这个cglib代理类会去实现一个beanAware接口为我们自动注入一个beanFactory，于是当我们去调用方法的时候，首先会在这里过滤这个方法，判断这个对象是不是第一次得到，如果是就会调用new的方法；如果不是，就去从beanFactory返回对象
+			 * 一个非常牛逼的判断, 判断到底是要new还是get
+			 * 判断执行的方法和调用的方法是不是同一个方法(执行的方法会变, 代理的方法不会变)
+			 * 判断依据: 当调用方法和执行方法都是同一个方法时, new; 否则, get
+			 *
+			 * 每个方法都会拦截一遍, 比如有两个方法a和c, a方法里调用了c方法, 那么会拦截3遍
 			 */
 			if (isCurrentlyInvokedFactoryMethod(beanMethod)) {
 				// The factory is calling the bean method in order to instantiate and register the bean
@@ -444,7 +445,7 @@ class ConfigurationClassEnhancer {
 					}
 				}
 				// beanFactory.getBean
-				// 这个方法spring就写的非常牛逼，在bean实例化的章节会重点讲
+				// 这个方法spring就写的非常牛逼, 在bean实例化的章节会重点讲
 				Object beanInstance = (useArgs ? beanFactory.getBean(beanName, beanMethodArgs) :
 						beanFactory.getBean(beanName));
 				if (!ClassUtils.isAssignableValue(beanMethod.getReturnType(), beanInstance)) {
@@ -456,8 +457,7 @@ class ConfigurationClassEnhancer {
 									beanMethod.getReturnType().getName()));
 						}
 						beanInstance = null;
-					}
-					else {
+					} else {
 						String msg = String.format("@Bean method %s.%s called as bean reference " +
 								"for type [%s] but overridden by non-compatible bean instance of type [%s].",
 								beanMethod.getDeclaringClass().getSimpleName(), beanMethod.getName(),
@@ -465,8 +465,7 @@ class ConfigurationClassEnhancer {
 						try {
 							BeanDefinition beanDefinition = beanFactory.getMergedBeanDefinition(beanName);
 							msg += " Overriding bean of same name declared in: " + beanDefinition.getResourceDescription();
-						}
-						catch (NoSuchBeanDefinitionException ex) {
+						} catch (NoSuchBeanDefinitionException ex) {
 							// Ignore - simply no detailed message then.
 						}
 						throw new IllegalStateException(msg);
@@ -478,8 +477,7 @@ class ConfigurationClassEnhancer {
 					beanFactory.registerDependentBean(beanName, outerBeanName);
 				}
 				return beanInstance;
-			}
-			finally {
+			} finally {
 				if (alreadyInCreation) {
 					beanFactory.setCurrentlyInCreation(beanName, true);
 				}
@@ -527,7 +525,9 @@ class ConfigurationClassEnhancer {
 		 * to happen on Groovy classes).
 		 */
 		private boolean isCurrentlyInvokedFactoryMethod(Method method) {
+			// 得到代理方法
 			Method currentlyInvoked = SimpleInstantiationStrategy.getCurrentlyInvokedFactoryMethod();
+			// 代理方法不为空 代理方法和执行方法名字一样 代理方法和执行方法参数类型一样
 			return (currentlyInvoked != null && method.getName().equals(currentlyInvoked.getName()) &&
 					Arrays.equals(method.getParameterTypes(), currentlyInvoked.getParameterTypes()));
 		}

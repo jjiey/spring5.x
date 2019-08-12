@@ -272,7 +272,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
-			// 扫描basePackage路径下的java文件，并把符合条件的转成BeanDefinition类型
+			// 扫描basePackage路径下的java文件, 并把符合条件的转成bd, 扫描类的底层是asm技术实现的
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 
 			for (BeanDefinition candidate : candidates) {
@@ -281,20 +281,20 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				candidate.setScope(scopeMetadata.getScopeName());
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 				if (candidate instanceof AbstractBeanDefinition) {
-					// 肯定会进来，因为上边findCandidateComponents()里new ScannedGenericBeanDefinition()，ScannedGenericBeanDefinition extends GenericBeanDefinition extends AbstractBeanDefinition
-					// 为所有的bd设置一些默认值，比如lazy（前边设置的那个lazy标识），init，destory
+					// 肯定会进来, 因为在上边findCandidateComponents()里返回的bd都是ScannedGenericBeanDefinition(), 而ScannedGenericBeanDefinition extends GenericBeanDefinition extends AbstractBeanDefinition
+					// 为所有的bd设置一套默认值, 比如lazy(前边设置的那个lazy标识), init, destroy等, 然后在下面再根据注解里的信息重新设置一遍
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
 				if (candidate instanceof AnnotatedBeanDefinition) {
-					// 检查并且处理常用的注解，这里的处理主要是指把常用注解的值设置到AnnotatedBeanDefinition当中，上边设置了一套默认值，在这里再把该类注解设置的值再set进去
-					// 当前前提是这个类必须是AnnotatedBeanDefinition类型的，说白了就是加了注解的类
+					// 检查并且处理常用的注解, 这里的处理主要是指把常用注解的值设置到AnnotatedBeanDefinition当中, 上边已经设置了一套默认值, 在这里再把该类注解设置的值再set进去
+					// 前提是这个类必须是AnnotatedBeanDefinition类型的, 说白了就是加了注解的类
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
-					// 注册到map当中
+					// 注册到bdMap当中
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}

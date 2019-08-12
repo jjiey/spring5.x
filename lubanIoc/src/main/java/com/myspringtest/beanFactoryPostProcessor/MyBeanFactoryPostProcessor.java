@@ -13,6 +13,12 @@ public class MyBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		AnnotatedBeanDefinition annotatedBeanDefinition = (AnnotatedBeanDefinition) beanFactory.getBeanDefinition("indexDao");
 		annotatedBeanDefinition.setScope("prototype");
+//		/**
+//		 * <bean>
+//		 *     <preperty ref="xxx">
+//		 * </bean>
+//		 */
+//		annotatedBeanDefinition.getPropertyValues();
 	}
 
 }

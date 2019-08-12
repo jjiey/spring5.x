@@ -161,33 +161,38 @@ public class AnnotationConfigUtils {
 		Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
 
 		/**
-		 * BeanDefinitio的注册，这里很重要，需要理解注册每个bean的类型
-		 * 在这里spring自己注册了6个类，1个是beanFactoryPostProcessor（ConfigurationClassPostProcessor），5个是beanPostProcessor
+		 * BeanDefinition的注册, 这里很重要, 需要理解注册每个bean的类型
+		 * 在这里spring自己注册了6个类, 1个是beanFactoryPostProcessor(ConfigurationClassPostProcessor), 5个是beanPostProcessor
 		 */
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
-			// RootBeanDefinition是BeanDefinition的一种，现在可以理解为它是用来描述spring内部的类
+			// RootBeanDefinition是BeanDefinition的一种, 可以理解为它是用来描述spring内部的类
 			/**
+			 * 第一个类: BeanFactoryPostProcessor
 			 * ConfigurationClassPostProcessor是spring里非常重要的类
-			 * 需要注意的是ConfigurationClassPostProcessor 的类型是 BeanDefinitionRegistryPostProcessor
-			 * 而BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor
-			 * 为什么要在这里注册ConfigurationClassPostProcessor？
+			 * 需要注意ConfigurationClassPostProcessor的类型是BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor
+			 * 为什么要在这里注册ConfigurationClassPostProcessor?
 			 * 因为在后边annotationConfigApplicationContext.refresh()底层通过PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors()方法要调用所有的postProcessBeanDefinitionRegistry()方法在spring的beanFactory初始化的过程中去做一些事情
-			 * 怎么来做这些事情呢？委托了多个实现了BeanDefinitionRegistryPostProcessor或者BeanFactoryPostProcessor接口的类来做这些事情，有自定义的也有spring内部的；其中ConfigurationClassPostProcessor就是一个spring内部的BeanDefinitionRegistryPostProcessor；因为如果你不添加这里就没有办法委托ConfigurationClassPostProcessor做一些功能（回调，解耦，易于扩展）；到底哪些功能？参考ConfigurationClassPostProcessor的BeanDefinitionRegistryPostProcessors()方法源码
+			 * 怎么来做这些事情呢? 就是委托了多个实现了BeanDefinitionRegistryPostProcessor或者BeanFactoryPostProcessor接口的类来做这些事情, 有自定义的也有spring内部的; 其中ConfigurationClassPostProcessor就是一个spring内部的BeanDefinitionRegistryPostProcessor, 因为如果你不添加这里就没有办法委托ConfigurationClassPostProcessor做一些功能(回调, 解耦, 易于扩展)；到底哪些功能? 参考ConfigurationClassPostProcessor的BeanDefinitionRegistryPostProcessors()方法源码
 			 */
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
 			def.setSource(source);
+			// registerPostProcessor会注册到map里然后返回BeanDefinitionHolder
 			beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
 		if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
-			// 往bdmap中添加bean后置处理器AutowiredAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor extends BeanPostProcessor
+			/**
+			 * 第二个类: BeanPostProcessor
+			 */
 			RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
 		if (!registry.containsBeanDefinition(REQUIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
-			// 往bdmap中添加bean后置处理器RequiredAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor extends BeanPostProcessor
+			/**
+			 * 第三个类: BeanPostProcessor
+			 */
 			RootBeanDefinition def = new RootBeanDefinition(RequiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, REQUIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
@@ -195,7 +200,9 @@ public class AnnotationConfigUtils {
 
 		// Check for JSR-250 support, and if present add the CommonAnnotationBeanPostProcessor.
 		if (jsr250Present && !registry.containsBeanDefinition(COMMON_ANNOTATION_PROCESSOR_BEAN_NAME)) {
-			// 往bdmap中添加bean后置处理器CommonAnnotationBeanPostProcessor implements InstantiationAwareBeanPostProcessor extends BeanPostProcessor
+			/**
+			 * 第四个类: BeanPostProcessor
+			 */
 			RootBeanDefinition def = new RootBeanDefinition(CommonAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, COMMON_ANNOTATION_PROCESSOR_BEAN_NAME));
@@ -207,8 +214,7 @@ public class AnnotationConfigUtils {
 			try {
 				def.setBeanClass(ClassUtils.forName(PERSISTENCE_ANNOTATION_PROCESSOR_CLASS_NAME,
 						AnnotationConfigUtils.class.getClassLoader()));
-			}
-			catch (ClassNotFoundException ex) {
+			} catch (ClassNotFoundException ex) {
 				throw new IllegalStateException(
 						"Cannot load optional framework class: " + PERSISTENCE_ANNOTATION_PROCESSOR_CLASS_NAME, ex);
 			}
@@ -217,12 +223,18 @@ public class AnnotationConfigUtils {
 		}
 
 		if (!registry.containsBeanDefinition(EVENT_LISTENER_PROCESSOR_BEAN_NAME)) {
+			/**
+			 * 第五个类: BeanPostProcessor
+			 */
 			RootBeanDefinition def = new RootBeanDefinition(EventListenerMethodProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, EVENT_LISTENER_PROCESSOR_BEAN_NAME));
 		}
 
 		if (!registry.containsBeanDefinition(EVENT_LISTENER_FACTORY_BEAN_NAME)) {
+			/**
+			 * 第六个类: BeanPostProcessor
+			 */
 			RootBeanDefinition def = new RootBeanDefinition(DefaultEventListenerFactory.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, EVENT_LISTENER_FACTORY_BEAN_NAME));
@@ -259,7 +271,8 @@ public class AnnotationConfigUtils {
 	}
 
 	/**
-	 * 检查常用的注解
+	 * 处理类当中的通用(Common)注解: Lazy, Primary, DependsOn, Role, Description
+	 * 把它们添加到abd中
 	 * @param abd
 	 * @param metadata
 	 */
@@ -267,8 +280,7 @@ public class AnnotationConfigUtils {
 		AnnotationAttributes lazy = attributesFor(metadata, Lazy.class);
 		if (lazy != null) {
 			abd.setLazyInit(lazy.getBoolean("value"));
-		}
-		else if (abd.getMetadata() != metadata) {
+		} else if (abd.getMetadata() != metadata) {
 			lazy = attributesFor(abd.getMetadata(), Lazy.class);
 			if (lazy != null) {
 				abd.setLazyInit(lazy.getBoolean("value"));

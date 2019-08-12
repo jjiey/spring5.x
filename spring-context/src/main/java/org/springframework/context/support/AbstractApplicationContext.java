@@ -514,11 +514,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
 			// Prepare this context for refreshing.
-			// 准备工作包括设置启动时间，是否激活标识位，初始化属性源(property source)配置
+			// 准备工作包括设置启动时间, 是否激活标识位, 初始化属性源(property source)配置
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
-			// 返回一个factory，为什么需要返回一个工厂？因为要对工厂进行初始化
+			// 这里返回的factory是DefaultListableBeanFactory(DefaultListableBeanFactory implements ConfigurableListableBeanFactory)
+			// 为什么需要返回一个工厂? 因为要对工厂进行初始化
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
@@ -532,18 +533,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Invoke factory processors registered as beans in the context.
 				/**
-				 * 顾名思义，执行BeanPostProcessor的一些方法
-				 * 在spring的环境中去执行已经被注册的 factory processors
-				 * 设置执行自定义的和spring内部自己定义的ProcessBeanFactory
+				 * 顾名思义，执行BeanFactoryPostProcessors的一些方法
+				 * 在spring的环境中去执行已经被注册的factory processors
+				 * 即执行自定义的 和 spring内部自己定义的BeanFactoryPostProcessors
 				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
-				// 注册beanPostProcessor，spring内置的aop拦截器就是在这里添加进去的
+				// 注册beanPostProcessor, spring内置的aop拦截器就是在这里添加进去的
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
-				// 不重要，国际化的处理，只是一个技术，并不影响spring的流程
+				// 不重要, 国际化的处理, 只是一个技术, 并不影响spring的流程
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
@@ -558,8 +559,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
-				// 翻译：实例化所有剩余的(非惰性初始化)单例。
-				// 什么是剩余的单例对象？spring当中有很多单例对象，有的是spring自己提供的，比如beanPostProcess等，spring将程序员自己提供的比如service、dao等称之为剩余的单例
+				// 翻译: 实例化所有剩余的(非惰性初始化)单例。
+				// 什么是剩余的单例对象? spring当中有很多单例对象, 有的是spring自己提供的, 比如beanPostProcess等, spring将程序员自己提供的比如service、dao等称之为剩余的单例
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
@@ -600,8 +601,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize any placeholder property sources in the context environment
-		//这个方法目前没有子类去实现
-		//估计spring是期待后面的版本有子类去实现吧
+		// 这个方法目前没有子类去实现, 估计spring是期待后面的版本有子类去实现吧
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable
@@ -638,7 +638,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
-	 * 配置其标准的特征，比如上下文的加载器ClassLoader和post-processors回调
+	 * 配置其标准的特征, 比如上下文的加载器ClassLoader和post-processors回调
 	 * Configure the factory's standard context characteristics,
 	 * such as the context's ClassLoader and post-processors.
 	 * @param beanFactory the BeanFactory to configure
@@ -649,20 +649,22 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.setBeanClassLoader(getClassLoader());
 		/**
 		 * 添加bean表达式解释器，后面说
-		 * 为了能够让beanFactory去解析bean表达式，展示在前台页面
-		 * bean表达式解释器是能够在前台页面获取bean当中的属性，比如spring当中有个bean，在页面上可以用spring的标签去拿到它，比如${bean.name}
-		 * （后面说，用的比较少，因为一般用的是EL表达式）
+		 * 为了能够让beanFactory去解析bean表达式, 展示在前台页面
+		 * bean表达式解释器是能够在前台页面获取bean当中的属性, 比如spring当中有个bean, 在页面上可以用spring的标签去拿到它, 比如${bean.name}
+		 * (后面说，用的比较少，因为一般用的是EL表达式)
 		 */
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
-		// 可以对我们的属性进行编辑，是对象与string类型的转换，比如：<property ref="dao">，通过它把dao转换成一个对象
+		// 属性编辑器, 可以对我们的属性进行编辑, 是对象与string类型的转换
+		// 比如: <property ref="dao">, 通过它把dao转换成一个对象
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
-		// 直接往工厂中添加bean后置管理器ApplicationContextAwareProcessor implements BeanPostProcessor
-		// 能够在bean中获得到各种*Aware（*Aware都有其作用）
+		// 直接往工厂中添加bean后置管理器ApplicationContextAwareProcessor
+		// 能够在bean中获得到各种*Aware(*Aware都有其作用)
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 
-		// 添加了自动注入被忽略的列表，说白了当你的类继承这些个接口时不会被自动注入
+		// 添加了自动注入被忽略的列表, 说白了当你的类继承这些个接口时不会被自动注入
+		// 其实下边就是ApplicationContextAwareProcessor里的6种*Aware接口
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
 		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
@@ -672,14 +674,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// BeanFactory interface not registered as resolvable type in a plain factory.
 		// MessageSource registered (and found for autowiring) as a bean.
-		// 这个地方是依赖的替换，比如你有一个类叫BeanFactory.class，那就用beanFactory来替换它，可以先放一下，后面讲到bean的实例化会讲
+		// 这个地方是依赖的替换，比如你有一个类叫BeanFactory.class, 那就用beanFactory来替换它,
+		// 可以先放一下, 后面讲到bean的实例化会讲
 		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
 		beanFactory.registerResolvableDependency(ResourceLoader.class, this);
 		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
 		beanFactory.registerResolvableDependency(ApplicationContext.class, this);
 
 		// Register early post-processor for detecting inner beans as ApplicationListeners.
-		// 直接往工厂添加bean后置处理器ApplicationListenerDetector（自行百度作用）implements MergedBeanDefinitionPostProcessor extends BeanPostProcessor
+		// 直接往工厂添加bean后置处理器ApplicationListenerDetector TODO 自行百度ApplicationListenerDetector作用
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found.
@@ -691,8 +694,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Register default environment beans.
 		/**
-		 * 设置一些环境，是spring做的一些标准的初始化
-		 * 意思是如果自定义的Bean中没有名为"systemProperties"和"systemEnvironment"的Bean，则注册两个Bean，Key为"systemProperties"或"systemEnvironment"，Value为Map
+		 * 设置一些环境, 是spring做的一些标准的初始化
+		 * 意思是如果自定义的Bean中没有名为"systemProperties"和"systemEnvironment"的Bean, 则注册两个Bean, Key为"systemProperties"或"systemEnvironment", Value为Map
 		 * 这两个Bean就是一些系统配置和系统环境信息
 		 */
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
@@ -723,17 +726,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
 		/**
-		 * getBeanFactoryPostProcessors()是获取手动给spring添加的BeanFactoryPostProcessor
-		 * 这个地方需要注意自定义并不仅仅意味着是程序员自己写的
-		 * 因为自己写的可以加companent也可以不加，如果加了companent注解，getBeanFactoryPostProcessors()这个地方得不到，是spring自己扫描得到的
-		 * 为什么得不到？因为getBeanFactoryPostProcessors()这个方法是直接获取一个list，这个list是在AnnotationConfigApplicationContext被定义
-		 * 所谓的自定义的就是你手动调用AnnotationConfigApplicationContext.addBeanFactoryPostProcesor()方法;
+		 * getBeanFactoryPostProcessors()是获取手动调用annotationConfigApplicationContext.addBeanFactoryPostProcessor(XXX)方法给spring添加的BeanFactoryPostProcessor
+		 * 如果不是调用该方法添加的BeanFactoryPostProcessor, 在这里是获取不到的: 比如加了@companent注解的BeanFactoryPostProcessor在这里获取不到, 这种的是通过spring自己扫描得到的
+		 * 为什么获取不到? 因为getBeanFactoryPostProcessors()这个方法是直接获取AbstractApplicationContext里的一个list, 而addBeanFactoryPostProcessor()方法底层才是直接给这个list添加一个BeanFactoryPostProcessor
 		 */
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime
 		// (e.g. through an @Bean method registered by ConfigurationClassPostProcessor)
-		// 下边的代码暂时无所谓，添加后置处理器等等，getBean才会去执行，可以先不看
+		// 下边的代码暂时无所谓, 添加后置处理器等等, getBean才会去执行, 可以先不看
 		if (beanFactory.getTempClassLoader() == null && beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
 			beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
 			beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));

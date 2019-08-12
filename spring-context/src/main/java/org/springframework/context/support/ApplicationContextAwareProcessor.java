@@ -36,9 +36,7 @@ import org.springframework.util.StringValueResolver;
 
 /**
  *
- * 这个类说起来相当复杂
- * 要从他的父类BeanPostProcessor说起，可以先查看他的父类，
- * 看完父类之后再来下面的注释
+ * 这个类说起来相当复杂, 要从他的父类BeanPostProcessor说起, 可以先查看他的父类, 看完父类之后再来下面的注释
  * {@link org.springframework.beans.factory.config.BeanPostProcessor}
  * implementation that passes the ApplicationContext to beans that
  * implement the {@link EnvironmentAware}, {@link EmbeddedValueResolverAware},
@@ -95,8 +93,7 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 				invokeAwareInterfaces(bean);
 				return null;
 			}, acc);
-		}
-		else {
+		} else {
 			invokeAwareInterfaces(bean);
 		}
 
@@ -105,13 +102,14 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 
 	private void invokeAwareInterfaces(Object bean) {
 		if (bean instanceof Aware) {
+			// EnvironmentAware可以得到spring的环境
 			if (bean instanceof EnvironmentAware) {
-
 				((EnvironmentAware) bean).setEnvironment(this.applicationContext.getEnvironment());
 			}
 			if (bean instanceof EmbeddedValueResolverAware) {
 				((EmbeddedValueResolverAware) bean).setEmbeddedValueResolver(this.embeddedValueResolver);
 			}
+			// ResourceLoaderAware可以得到我们的资源文件
 			if (bean instanceof ResourceLoaderAware) {
 				((ResourceLoaderAware) bean).setResourceLoader(this.applicationContext);
 			}
@@ -121,11 +119,10 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 			if (bean instanceof MessageSourceAware) {
 				((MessageSourceAware) bean).setMessageSource(this.applicationContext);
 			}
-			//spring帮你set一个applicationContext对象
-			//所以当我们自己的一个对象实现了ApplicationContextAware对象只需要提供setter就能得到applicationContext对象
-			//此处应该有鲜花。。。。
+			// spring帮你set一个applicationContext对象
+			// 所以当我们自己的一个对象实现了ApplicationContextAware对象只需要提供setter就能得到applicationContext对象
+			// 此处应该有鲜花。。。。
 			if (bean instanceof ApplicationContextAware) {
-				if (!bean.getClass().getSimpleName().equals("IndexDao"))
 				((ApplicationContextAware) bean).setApplicationContext(this.applicationContext);
 			}
 		}

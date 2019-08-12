@@ -94,7 +94,7 @@ abstract class ConfigurationClassUtils {
 		} else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
 			// Check already loaded Class if present...
 			// since we possibly can't even load the class file for this Class.
-			// 如果BeanDefinition是AbstractBeanDefinition的实例,并且beanDef有beanClass属性存在，则实例化StandardAnnotationMetadata
+			// 如果BeanDefinition是AbstractBeanDefinition的实例, 并且beanDef有beanClass属性存在，则给metadata赋值, 实例化StandardAnnotationMetadata
 			Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
 			metadata = new StandardAnnotationMetadata(beanClass, true);
 		} else {
@@ -111,28 +111,28 @@ abstract class ConfigurationClassUtils {
 
 		/**
 		 * 判断有没有加@Configuration注解
-		 * 如果加了，设置一个标识（为BeanDefinition设置configurationClass属性为full）
-		 * 如果没加，还要看是否是一个普通类，有没有加以下四个注解：Component，ComponentScan，Import，ImportResource，如果有，设置一个标识（为BeanDefinition设置configurationClass属性为lite）
-		 * 为什么加了@Configuration注解就不判断其他四个注解？
-		 * 因为如果有一个类上边加了@Configuration，其他的注解都放到解析这个类时去解析；如果一个类上边没有加@Configuration，但是写了其他四个注解，那spring就要单独去解析
+		 * 如果加了, 给bd设置full标识(为BeanDefinition设置configurationClass属性为full)
+		 * 如果没加, 再看是不是一个普通类, 有没有加以下四个注解: Component, ComponentScan, Import, ImportResource, 如果有, 给bd设置lite标识(为BeanDefinition设置configurationClass属性为lite)
+		 * 为什么加了@Configuration注解就不判断其他四个注解?
+		 * 因为如果有一个类上边加了@Configuration, 其他的注解都放到解析这个类时去解析; 如果一个类上边没有加@Configuration, 但是写了其他四个注解, 那spring就要在这里单独去解析
 		 */
 		// 判断当前这个bd中存在的类是不是加了@Configruation注解，如果存在则spring认为他是一个全注解的类
 		if (isFullConfigurationCandidate(metadata)) {
-			// 如果存在Configuration注解,则为BeanDefinition设置configurationClass属性为full
+			// 给bd设置full标识
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
-		// 判断是否加了以下注解，摘录isLiteConfigurationCandidate的源码：Component，ComponentScan，Import，ImportResource
 		// 如果不存在Configuration注解，spring则认为是一个部分注解类
+		// 如果没加@Configruation注解, 再判断是否加了以下注解(从源码得知)：Component，ComponentScan，Import，ImportResource
 		else if (isLiteConfigurationCandidate(metadata)) {
-			// 如果不存在Configuration注解,则为BeanDefinition设置configurationClass属性为lite
+			// 给bd设置lite标识
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
-		}
-		// 都不满足条件，直接返回false
-		else {
+		} else {
+			// 都不满足条件, 直接返回false
 			return false;
 		}
 
 		// It's a full or lite configuration candidate... Let's determine the order value, if any.
+		// 对于full或lite的, 确定order顺序值
 		Integer order = getOrder(metadata);
 		if (order != null) {
 			beanDef.setAttribute(ORDER_ATTRIBUTE, order);
@@ -173,13 +173,13 @@ abstract class ConfigurationClassUtils {
 	 */
 	public static boolean isLiteConfigurationCandidate(AnnotationMetadata metadata) {
 		// Do not consider an interface or an annotation...
-		// 如果是个接口，直接返回false
+		// 如果是个接口, 直接返回false
 		if (metadata.isInterface()) {
 			return false;
 		}
 
 		// Any of the typical annotations found?
-		// 循环判断有没有加那四个注解：Component，ComponentScan，Import，ImportResource
+		// 如果不是接口, 判断有没有加这四个注解: Component, ComponentScan, Import, ImportResource
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;
@@ -187,6 +187,7 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Finally, let's look for @Bean methods...
+		// 如果不是接口, 没有加那四个注解, 最后还要看有没有加了@Bean注解的方法
 		try {
 			return metadata.hasAnnotatedMethods(Bean.class.getName());
 		} catch (Throwable ex) {

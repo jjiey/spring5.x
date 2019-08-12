@@ -77,13 +77,18 @@ class ComponentScanAnnotationParser {
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
-		// 设置bean的名字生成器BeanNameGenerator（map里的Key）
+		/**
+		 * ==========start
+		 * 根据@ComponentScan里的信息设置scanner的属性
+		 * ==========start
+		 */
+
+		// 设置bean的名字生成器BeanNameGenerator(bdMap里的Key), 自定义实现BeanNameGenerator接口可以修改beanName生成策略
 		Class<? extends BeanNameGenerator> generatorClass = componentScan.getClass("nameGenerator");
 		boolean useInheritedGenerator = (BeanNameGenerator.class == generatorClass);
-		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
-				BeanUtils.instantiateClass(generatorClass));
+		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator : BeanUtils.instantiateClass(generatorClass));
 
-		// web当中再来讲 判断这个类是不是代理的ProxyMode
+		// web当中再来讲 判断这个类是不是代理的ProxyMode，@ComponentScan注解里可以配置scopedProxy
 		ScopedProxyMode scopedProxyMode = componentScan.getEnum("scopedProxy");
 		if (scopedProxyMode != ScopedProxyMode.DEFAULT) {
 			scanner.setScopedProxyMode(scopedProxyMode);
@@ -92,29 +97,30 @@ class ComponentScanAnnotationParser {
 			scanner.setScopeMetadataResolver(BeanUtils.instantiateClass(resolverClass));
 		}
 
-		// 匹配一个表达式，不知道干啥的
+		// 匹配一个表达式，@ComponentScan注解里可以配置resourcePattern
 		scanner.setResourcePattern(componentScan.getString("resourcePattern"));
 
-		// 遍历当中的过滤
+		// 遍历当中的过滤, @ComponentScan注解里可以配置includeFilters
 		for (AnnotationAttributes filter : componentScan.getAnnotationArray("includeFilters")) {
 			for (TypeFilter typeFilter : typeFiltersFor(filter)) {
 				scanner.addIncludeFilter(typeFilter);
 			}
 		}
+		// 遍历当中的过滤, @ComponentScan注解里可以配置excludeFilters
 		for (AnnotationAttributes filter : componentScan.getAnnotationArray("excludeFilters")) {
 			for (TypeFilter typeFilter : typeFiltersFor(filter)) {
 				scanner.addExcludeFilter(typeFilter);
 			}
 		}
 
-		// 是否懒加载，默认false
+		// 是否懒加载, 默认false, @ComponentScan注解里可以配置lazyInit
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
 		if (lazyInit) {
-			// 到这里时还没有bd，在这里给ClassPathBeanDefinitionScanner里的beanDefinitionDefaults设置一个lazy标识，到后面再给所有的bd设置lazy
+			// 到这里时还没有bd, 在这里给ClassPathBeanDefinitionScanner里的beanDefinitionDefaults设置一个lazy标识, 到后面再给所有的bd设置lazy
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);
 		}
 
-		// 获取basePackages，为什么是set？因为@componentScan注解里basePackages是String[]
+		// 获取basePackages, 为什么是set? 因为@componentScan注解里basePackages是String[]
 		Set<String> basePackages = new LinkedHashSet<>();
 		String[] basePackagesArray = componentScan.getStringArray("basePackages");
 		for (String pkg : basePackagesArray) {
@@ -136,7 +142,14 @@ class ComponentScanAnnotationParser {
 				return declaringClass.equals(className);
 			}
 		});
-		
+
+		/**
+		 * ==========end
+		 * 根据@ComponentScan里的信息设置scanner的属性
+		 * ==========end
+		 */
+
+		// 其实前边一直在根据@ComponentScan里的信息设置scanner的属性, 得到basePackages, 这里才真正开始扫描basePackages
 		return scanner.doScan(StringUtils.toStringArray(basePackages));
 	}
 
