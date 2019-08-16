@@ -243,9 +243,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
 		/**
-		 * 通过name获取beanName。这里不直接使用name直接作为beanName有两个原因：
-		 * 1.name可能会以&字符开头，即&beanName，表明调用者想获取FactoryBean本身，而非FactoryBean实现类所创建的bean
-		 * 在BeanFactory中，FactoryBean的实现类和其他的bean存储方式是一致的，即<beanName, bean>，beanName中是没有&这个字符的，所以我们需要将name的首字符&移除，这样才能从缓存里取到FactoryBean实例。
+		 * 通过name获取beanName。这里不直接使用name作为beanName有两个原因:
+		 * 1.name可能会以&字符开头, 即&beanName, 表明调用者想获取FactoryBean本身, 而非FactoryBean实现类所创建的bean
+		 * 在BeanFactory中, FactoryBean的实现类和其他的bean存储方式是一致的, 即<beanName, bean>, beanName中是没有&这个字符的, 所以我们需要将name的首字符&移除, 这样才能从缓存里取到FactoryBean实例。
 		 * 2.如果有别名，需要转换别名
 		 */
 		final String beanName = transformedBeanName(name);
@@ -253,15 +253,16 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 		// Eagerly check singleton cache for manually registered singletons.
 		/**
-		 * 这个方法在初始化的时候会调用，在getBean的时候也会调用，为什么需要这么做呢？
-		 * 也就是说spring在初始化的时候先获取这个对象，判断这个对象是否被实例化好了
-		 * 从spring的单例池中获取bean，由于spring中单例池是一个map（singletonObjects），所以可以理解getSingleton(beanName)相当于beanMap.get(beanName)
-		 * 由于方法会在spring环境初始化的时候（就是对象被创建的时候调用一次）调用一次，还会在getBean的时候调用一次，所以再调试的时候需要特别注意，不能直接断点在这里，需要先进入到annotationConfigApplicationContext.getBean(IndexDao.class)，之后再来断点，这样就确保了我们是在获取这个bean的时候调用的
-		 * 需要说明的是在初始化时候调用一般都是返回null
+		 * 这个方法在初始化的时候会调用, 在annotationConfigApplicationContext.getBean的时候也会调用, 为什么需要这么做呢? 其实就是类似于一个缓存
+		 * spring在初始化之前先从spring的单例池中获取这个bean, 判断这个对象是否被实例化好了。由于spring中单例池是一个map(singletonObjects), 所以可以理解getSingleton(beanName)相当于beanMap.get(beanName)
+		 * 由于方法会在spring环境初始化的时候(就是对象被创建的时候)调用一次, 还会在getBean的时候调用一次, 所以在调试的时候需要特别注意, 不能直接断点在这里, 需要先进入到annotationConfigApplicationContext.getBean(IndexDao.class)之后再来断点, 这样就确保了我们是在获取这个bean的时候调用的
+		 * 在初始化时候调用一般都是返回null
+		 *
+		 * lazy的初始化时不会进到这里, 因为前边已经过滤了, lazy的只有要获取的的时候才会进来
 		 */
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
-			// 这里的判断代码是对于日志的记录，方便我们以后阅读，应该注释，不影响spring功能
+			// 日志记录
 			if (logger.isDebugEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
 					logger.debug("Returning eagerly cached instance of singleton bean '" + beanName +
@@ -272,20 +273,21 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			/**
-			 * 如果sharedInstance是普通的单例bean，下面的方法会直接返回。
-			 * 但如果sharedInstance是FactoryBean类型的，则需调用getObject工厂方法获取真正的bean实例。
-			 * 如果用户想获取FactoryBean本身，这里也不会做特别的处理，直接返回即可。毕竟FactoryBean的实现类本身也是一种bean，只不过具有一点特殊的功能而已。
+			 * 如果sharedInstance是普通的单例bean, 下面的方法会直接返回
+			 * 但如果sharedInstance是FactoryBean类型的, 则需调用getObject工厂方法获取真正的bean实例
+			 * 如果用户想获取FactoryBean本身, 这里也不会做特别的处理, 直接返回即可。毕竟FactoryBean的实现类本身也是一种bean, 只不过具有一点特殊的功能而已
 			 */
 			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		} else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
-			// 判断是否是原型的，如果是原型的不应该在初始化的时候创建
+			// 判断是否是原型的, 如果是原型的不应该在初始化的时候创建 TODO 应该是 判断是否目前正在创建原型 后面研究研究
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
 			// Check if bean definition exists in this factory.
+			// 检查工厂中是否存在父工厂, 这个不是很懂
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
@@ -303,7 +305,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			if (!typeCheckOnly) {
-				// 添加到alreadyCreated Set<String>集合当中，表示已经创建过一次
+				// 添加到alreadyCreated Set<String>集合当中，表示已经创建
 				markBeanAsCreated(beanName);
 			}
 
@@ -312,6 +314,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				checkMergedBeanDefinition(mbd, beanName, args);
 
 				// Guarantee initialization of beans that the current bean depends on.
+				// 如果有dependsOn, 会先实例化dependsOn的bean
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {

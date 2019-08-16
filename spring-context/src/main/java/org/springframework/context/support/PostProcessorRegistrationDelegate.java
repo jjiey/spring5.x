@@ -244,22 +244,35 @@ final class PostProcessorRegistrationDelegate {
 		beanFactory.clearMetadataCache();
 	}
 
+	/**
+	 * 之前已经添加了三个后置处理器:
+	 * prepareBeanFactory()时注册了两个: ApplicationContextAwareProcessor ApplicationListenerDetector
+	 * ConfigurationClassPostProcessor执行父类postProcessBeanFactory()时注册了一个: ConfigurationClassPostProcessor.ImportAwareBeanPostProcessor
+	 * 这个方法会再注册四个后置处理器:
+	 * PostProcessorRegistrationDelegate.BeanPostProcessorChecker
+	 * CommonAnnotationBeanPostProcessor
+	 * AutowiredAnnotationBeanPostProcessor
+	 * RequiredAnnotationBeanPostProcessor
+	 * 这个方法结束后一共有七个后置处理器, 但是这七个里没有一个是处理AOP的
+	 * 如果开启了AOP, 在这个方法里还会注入AOP的后置处理器: AnnotationAwareAspectJAutoProxyCreator
+	 */
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
 		// 从beanDefinitionMap中得到所有的BeanPostProcessor
-		// 之前在实例化AnnotatedBeanDefinitionReader时添加了三个，在下边会注册进去
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
 		// Register BeanPostProcessorChecker that logs an info message when
 		// a bean is created during BeanPostProcessor instantiation, i.e. when
 		// a bean is not eligible for getting processed by all BeanPostProcessors.
 		int beanProcessorTargetCount = beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length;
-		// 直接往工厂中添加bean后置管理器BeanPostProcessorChecker implements BeanPostProcessor
+		/**
+		 * 这里会注册后置处理器: PostProcessorRegistrationDelegate.BeanPostProcessorChecker
+		 */
 		beanFactory.addBeanPostProcessor(new BeanPostProcessorChecker(beanFactory, beanProcessorTargetCount));
 
 		// Separate between BeanPostProcessors that implement PriorityOrdered, Ordered, and the rest.
-		// 翻译：把实现了（PriorityOrdered，Ordered，其它）接口的BeanPostProcessors区分开
+		// 翻译: 把实现了(PriorityOrdered，Ordered，其它)接口的BeanPostProcessors区分开
 		List<BeanPostProcessor> priorityOrderedPostProcessors = new ArrayList<>(); // PriorityOrdered
 		List<BeanPostProcessor> internalPostProcessors = new ArrayList<>(); // MergedBeanDefinitionPostProcessor
 		List<String> orderedPostProcessorNames = new ArrayList<>(); // Ordered
@@ -277,9 +290,15 @@ final class PostProcessorRegistrationDelegate {
 				nonOrderedPostProcessorNames.add(ppName);
 			}
 		}
-		//priorityOrderedPostProcessors.remove(1); // 自己测试去掉RequiredAnnotationBeanPostProcessor的情况
+		//priorityOrderedPostProcessors.remove(1); // 自己测试去掉RequiredAnnotationBeanPostProcessor的情况, 不会解析@Required注解
 		// First, register the BeanPostProcessors that implement PriorityOrdered.
 		sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
+		/**
+		 * 这里会注册后置处理器:
+		 * CommonAnnotationBeanPostProcessor
+		 * AutowiredAnnotationBeanPostProcessor
+		 * RequiredAnnotationBeanPostProcessor
+		 */
 		registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
 
 		// Next, register the BeanPostProcessors that implement Ordered.
@@ -303,16 +322,25 @@ final class PostProcessorRegistrationDelegate {
 				internalPostProcessors.add(pp);
 			}
 		}
+		/**
+		 * 如果开启了AOP, 在这里还会注入AOP的后置处理器: AnnotationAwareAspectJAutoProxyCreator
+		 */
 		registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
 
 		// Finally, re-register all internal BeanPostProcessors.
-		//internalPostProcessors.remove(1);  // 自己测试去掉RequiredAnnotationBeanPostProcessor的情况
+		//internalPostProcessors.remove(1);  // 自己测试去掉RequiredAnnotationBeanPostProcessor的情况, 不会解析@Required注解
 		sortPostProcessors(internalPostProcessors, beanFactory);
-
+		/**
+		 * 重新注册CommonAnnotationBeanPostProcessor AutowiredAnnotationBeanPostProcessor RequiredAnnotationBeanPostProcessor三个
+		 * 是为了改变顺序, 如果有AOP的后置处理器, 把它的顺序放到这三个前面
+		 */
 		registerBeanPostProcessors(beanFactory, internalPostProcessors);
 
 		// Re-register post-processor for detecting inner beans as ApplicationListeners,
 		// moving it to the end of the processor chain (for picking up proxies etc).
+		/**
+		 * 重新注册ApplicationListenerDetector, 为了将它的顺序移动到最末尾(用于获取代理等)
+		 */
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
 	}
 
@@ -365,7 +393,7 @@ final class PostProcessorRegistrationDelegate {
 	 * BeanPostProcessor that logs an info message when a bean is created during
 	 * BeanPostProcessor instantiation, i.e. when a bean is not eligible for
 	 * getting processed by all BeanPostProcessors.
-	 * 当Spring的配置中的后置处理器还没有被注册就已经开始了bean的初始化，便会打印出BeanPostProcessorChecker中设定的信息
+	 * 当Spring的配置中的后置处理器还没有被注册就已经开始了bean的初始化, 便会打印出BeanPostProcessorChecker中设定的信息
 	 */
 	private static final class BeanPostProcessorChecker implements BeanPostProcessor {
 
@@ -377,7 +405,7 @@ final class PostProcessorRegistrationDelegate {
 
 		public BeanPostProcessorChecker(ConfigurableListableBeanFactory beanFactory, int beanPostProcessorTargetCount) {
 			this.beanFactory = beanFactory;
-			// 怎么检查？比较后置处理器的数量 和 当前执行过的后置处理器的数量，不一致就报错
+			// 怎么检查? 比较后置处理器的数量 和 当前执行过的后置处理器的数量, 不一致就报错
 			this.beanPostProcessorTargetCount = beanPostProcessorTargetCount;
 		}
 

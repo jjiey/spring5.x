@@ -87,6 +87,7 @@ public class AnnotationConfigUtils {
 
 	/**
 	 * The bean name of the internally managed Required annotation processor.
+	 * TODO 只是打上一个标记, 5.1之后这个被@deprecated, 不会在下面注册了。spring源码中注释: @deprecated as of 5.1, since no Required processor is registered by default anymore
 	 */
 	public static final String REQUIRED_ANNOTATION_PROCESSOR_BEAN_NAME =
 			"org.springframework.context.annotation.internalRequiredAnnotationProcessor";

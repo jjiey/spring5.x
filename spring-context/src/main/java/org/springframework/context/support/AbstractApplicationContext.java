@@ -533,14 +533,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Invoke factory processors registered as beans in the context.
 				/**
-				 * 顾名思义，执行BeanFactoryPostProcessors的一些方法
+				 * 执行BeanFactoryPostProcessors的一些方法
 				 * 在spring的环境中去执行已经被注册的factory processors
 				 * 即执行自定义的 和 spring内部自己定义的BeanFactoryPostProcessors
 				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
-				// 注册beanPostProcessor, spring内置的aop拦截器就是在这里添加进去的
+				// 注册beanPostProcessor, 如果开启了AOP, aop的后置处理器就是在这里添加进去的
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
@@ -552,10 +552,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				// 这个方法在当前版本的spring是没用任何代码的，可能spring期待在后面的版本中去扩展吧
 				onRefresh();
 
 				// Check for listener beans and register them.
-				// 监听器的注册
+				// 注册监听器
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
@@ -882,6 +883,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
 		// Initialize conversion service for this context.
+		// ConversionService用来做字符串转换成类型 TODO 百度ConversionService
 		if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
 				beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
 			beanFactory.setConversionService(
@@ -896,6 +898,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize LoadTimeWeaverAware beans early to allow for registering their transformers early.
+		// LoadTimeWeaverAware aspectj做的静态织入的过程
 		String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
 		for (String weaverAwareName : weaverAwareNames) {
 			getBean(weaverAwareName);
