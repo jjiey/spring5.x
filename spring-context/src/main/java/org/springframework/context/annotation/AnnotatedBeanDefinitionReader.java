@@ -283,8 +283,7 @@ public class AnnotatedBeanDefinitionReader {
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 
 		/**
-		 * 把definitionHolder注册给registry
-		 * 这里registy就是AnnotatonConfigApplicationContext, 因为看源码AnnotatonConfigApplicationContext implements BeanDefinitionRegistry
+		 * 把definitionHolder注册给registry(AnnotatonConfigApplicationContext), 因为看源码AnnotatonConfigApplicationContext implements BeanDefinitionRegistry
 		 * AnnotatonConfigApplicationContext在初始化的時候通过调用父类的构造方法实例化了一个DefaultListableBeanFactory
 		 * registerBeanDefinition方法里面就是把definitionHolder包含的信息注册到DefaultListableBeanFactory这个工厂
 		 */

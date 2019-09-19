@@ -260,7 +260,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		 *
 		 * lazy的初始化时不会进到这里, 因为前边已经过滤了, lazy的只有要获取的的时候才会进来
 		 */
+		// getSingleton(beanName)会返回三种情况：完全实例化好的bean；一个原始bean；null
 		Object sharedInstance = getSingleton(beanName);
+		// 初始化调用doGetBean()方法时args值为null
 		if (sharedInstance != null && args == null) {
 			// 日志记录
 			if (logger.isDebugEnabled()) {
@@ -273,21 +275,23 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			/**
-			 * 如果sharedInstance是普通的单例bean, 下面的方法会直接返回
+			 * 如果sharedInstance是完全实例化好的bean或者原始bean, 下面的方法会直接返回
 			 * 但如果sharedInstance是FactoryBean类型的, 则需调用getObject工厂方法获取真正的bean实例
 			 * 如果用户想获取FactoryBean本身, 这里也不会做特别的处理, 直接返回即可。毕竟FactoryBean的实现类本身也是一种bean, 只不过具有一点特殊的功能而已
 			 */
+			// 和下面调用getObjectForBeanInstance方法的区别是最后一个参数为null
 			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		} else {
+			// 翻译：如果我们已经创建了这个bean实例，则会失败:假设我们是在一个循环引用中
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
-			// 判断是否是原型的, 如果是原型的不应该在初始化的时候创建 TODO 应该是 判断是否目前正在创建原型 后面研究研究
+			// 判断在当前线程中，beanName的原型bean是否正在创建中
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
 			// Check if bean definition exists in this factory.
-			// 检查工厂中是否存在父工厂, 这个不是很懂
+			// 检查工厂中是否存在父工厂, 什么是父工厂这个不是很懂
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
@@ -304,8 +308,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
+			// 初始化调用doGetBean()方法时typeCheckOnly值为false
 			if (!typeCheckOnly) {
-				// 添加到alreadyCreated Set<String>集合当中，表示已经创建
+				// 添加到alreadyCreated Set<String>集合当中，表示已经创建(或即将创建)
 				markBeanAsCreated(beanName);
 			}
 
@@ -332,11 +337,13 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					}
 				}
 
+				// 判断bean是否是单例模式
 				// Create bean instance.
 				if (mbd.isSingleton()) {
+					// 这个getSingleton会通过调用createBean方法创建一个bean实例加到单例池中
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
-							// 创建对象
+							// 创建bean实例，这个方法返回的是完全实例化好的bean
 							return createBean(beanName, mbd, args);
 						} catch (BeansException ex) {
 							// Explicitly remove instance from singleton cache: It might have been put there
@@ -346,6 +353,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 							throw ex;
 						}
 					});
+					// 里面会调用getObject方法，处理factoryBean
 					bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
 				} else if (mbd.isPrototype()) {
 					// It's a prototype -> create a new instance.
@@ -368,8 +376,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 							beforePrototypeCreation(beanName);
 							try {
 								return createBean(beanName, mbd, args);
-							}
-							finally {
+							} finally {
 								afterPrototypeCreation(beanName);
 							}
 						});
@@ -387,6 +394,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 		}
 
+		// 初始化调用doGetBean()方法时requiredType值为null，所以初始化的过程不会进这段代码，这段代码主要做的应该是一个类型转换
+		// 翻译：检查所需类型是否与实际bean实例的类型匹配
 		// Check if required type matches the type of the actual bean instance.
 		if (requiredType != null && !requiredType.isInstance(bean)) {
 			try {
@@ -1034,6 +1043,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * Return whether the specified prototype bean is currently in creation
 	 * (within the current thread).
 	 * @param beanName the name of the bean
+	 *
+	 * 翻译：返回指定的原型bean是否正在创建中(在当前线程中)
+	 * prototypesCurrentlyInCreation是一个ThreadLocal
 	 */
 	protected boolean isPrototypeCurrentlyInCreation(String beanName) {
 		Object curVal = this.prototypesCurrentlyInCreation.get();
@@ -1549,6 +1561,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * <p>This allows the bean factory to optimize its caching for repeated
 	 * creation of the specified bean.
 	 * @param beanName the name of the bean
+	 *
+	 * 翻译：将指定的bean标记为已经创建(或即将创建)
+	 *       这允许bean工厂为重复创建指定的bean优化缓存
 	 */
 	protected void markBeanAsCreated(String beanName) {
 		if (!this.alreadyCreated.contains(beanName)) {
@@ -1618,6 +1633,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @param beanName the canonical bean name
 	 * @param mbd the merged bean definition
 	 * @return the object to expose for the bean
+	 *
+	 * 翻译：获取给定bean实例的对象，对于FactoryBean，要么是bean实例本身，要么是它创建的对象
 	 */
 	protected Object getObjectForBeanInstance(
 			Object beanInstance, String name, String beanName, @Nullable RootBeanDefinition mbd) {
@@ -1651,6 +1668,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				mbd = getMergedLocalBeanDefinition(beanName);
 			}
 			boolean synthetic = (mbd != null && mbd.isSynthetic());
+			// 调用getObject方法
 			object = getObjectFromFactoryBean(factory, beanName, !synthetic);
 		}
 		return object;
@@ -1699,6 +1717,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// new DisposableBeanAdapter(bean, beanName, mbd, getBeanPostProcessors(), acc)对象里注册了第九个后置处理器
 		if (!mbd.isPrototype() && requiresDestruction(bean, mbd)) {
 			if (mbd.isSingleton()) {
+				/**
+				 * 翻译：
+				 * 注册一个DisposableBean用来执行所有销毁工作
+				 * 这个bean是DestructionAwareBeanPostProcessors
+				 * DisposableBean接口，可以自定义销毁方法
+				 */
 				// Register a DisposableBean implementation that performs all destruction
 				// work for the given bean: DestructionAwareBeanPostProcessors,
 				// DisposableBean interface, custom destroy method.

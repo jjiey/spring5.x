@@ -287,7 +287,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
-			// 否则, 判断有没有加@Configuration或这4个注解：Component，ComponentScan，Import，ImportResource
+			// 否则, 判断有没有加@Configuration或这4个注解：@Component，@ComponentScan，@Import，@ImportResource
 			// 其实初始化时只有是我们自己的注解类时才会进入
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				// BeanDefinitionHolder其实没有任何作用，看源码发现其实就是封装了几个对象，为了方便传参

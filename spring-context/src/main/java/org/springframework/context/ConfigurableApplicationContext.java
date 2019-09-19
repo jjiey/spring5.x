@@ -187,6 +187,8 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	 * @see #refresh()
 	 * @see #close()
 	 * @see #getBeanFactory()
+	 *
+	 * 翻译：确定此应用程序上下文是否处于活动状态，也就是说，它是否至少刷新了一次，并且尚未关闭。
 	 */
 	boolean isActive();
 

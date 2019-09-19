@@ -533,6 +533,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * @see #instantiateBean
 	 * @see #instantiateUsingFactoryMethod
 	 * @see #autowireConstructor
+	 *
+	 * 这个方法主要：
+	 * 创建原始bean实例：createBeanInstance(beanName, mbd, args)
+	 * 添加原始对象工厂对象到singletonFactories缓存中：addSingletonFactory(beanName, new ObjectFactory<Object>{...})
+	 * 填充属性，解析依赖：populateBean(beanName, mbd, instanceWrapper)
 	 */
 	protected Object doCreateBean(final String beanName, final RootBeanDefinition mbd, final @Nullable Object[] args)
 			throws BeanCreationException {
@@ -556,9 +561,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 *
 			 * 这里面执行了第二次执行后置处理器
 			 */
+			// 这里创建的是一个原始的bean对象，并将bean对象包裹在BeanWrapper对象中返回
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
-		// 这里拿到的是原生对象, 需要代理的话还在下边
+		// 从BeanWrapper中获取原始的bean对象
 		final Object bean = instanceWrapper.getWrappedInstance();
 		Class<?> beanType = instanceWrapper.getWrappedClass();
 		if (beanType != NullBean.class) {
@@ -583,6 +589,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		/**
+		 * earlySingletonExposure用于表示是否“提前暴露”原始对象的引用，用于解决循环依赖
+		 * 对于单例bean，该变量一般为true
+		 */
 		// Eagerly cache singletons to be able to resolve circular references
 		// even when triggered by lifecycle interfaces like BeanFactoryAware.
 		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
@@ -596,6 +606,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 * 第四次执行后置处理器
 			 * 重要，解决循环依赖
 			 * SmartInstantiationAwareBeanPostProcessor.getEarlyBeanReference
+			 */
+			// 这个方法向缓存中添加单例bean工厂对象，从该工厂可以获取原始对象的引用，也就是所谓的“早期引用”
+			/**
+			 * getEarlyBeanReference方法获取原始对象的早期引用，里面会执行会执行AOP相关逻辑，若bean未被AOP拦截，getEarlyBeanReference原样返回
+			 * 所以可以把getEarlyBeanReference(beanName, mbd, bean)理解为return bean
 			 */
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
@@ -623,6 +638,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		if (earlySingletonExposure) {
+			// 第一个getSingleton，这个方法会返回三种情况：完全实例化好的bean；一个原始bean；null
 			Object earlySingletonReference = getSingleton(beanName, false);
 			if (earlySingletonReference != null) {
 				if (exposedObject == bean) {
@@ -648,8 +664,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		// 翻译：将bean注册为一次性的
 		// Register bean as disposable.
 		try {
+			/**
+			 * 这里面注册了第九个后置处理器
+			 */
 			registerDisposableBeanIfNecessary(beanName, bean, mbd);
 		} catch (BeanDefinitionValidationException ex) {
 			throw new BeanCreationException(

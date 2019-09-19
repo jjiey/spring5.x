@@ -274,30 +274,35 @@ public class ContextLoader {
 		try {
 			// Store context in local instance variable, to guarantee that
 			// it is available on ServletContext shutdown.
+			// 这里context不为null，AbstractContextLoaderInitializer.registerContextLoaderListener()方法里给context赋了值为AnnotationConfigWebApplicationContext
 			if (this.context == null) {
 				this.context = createWebApplicationContext(servletContext);
 			}
+			// AnnotationConfigWebApplicationContext extends AbstractRefreshableWebApplicationContext implements ConfigurableWebApplicationContext
 			if (this.context instanceof ConfigurableWebApplicationContext) {
 				ConfigurableWebApplicationContext cwac = (ConfigurableWebApplicationContext) this.context;
+				// 是否处于活动状态
 				if (!cwac.isActive()) {
 					// The context has not yet been refreshed -> provide services such as
 					// setting the parent context, setting the application context id, etc
+					// 是否有父上下文
 					if (cwac.getParent() == null) {
 						// The context instance was injected without an explicit parent ->
 						// determine parent for root web application context, if any.
 						ApplicationContext parent = loadParentContext(servletContext);
 						cwac.setParent(parent);
 					}
+					// 此方法主要是获取应用一些初始化参数，最后调用refresh()
 					configureAndRefreshWebApplicationContext(cwac, servletContext);
 				}
 			}
+			// 把根容器放到当前servletContext
 			servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);
 
 			ClassLoader ccl = Thread.currentThread().getContextClassLoader();
 			if (ccl == ContextLoader.class.getClassLoader()) {
 				currentContext = this.context;
-			}
-			else if (ccl != null) {
+			} else if (ccl != null) {
 				currentContextPerThread.put(ccl, this.context);
 			}
 
@@ -311,13 +316,11 @@ public class ContextLoader {
 			}
 
 			return this.context;
-		}
-		catch (RuntimeException ex) {
+		} catch (RuntimeException ex) {
 			logger.error("Context initialization failed", ex);
 			servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, ex);
 			throw ex;
-		}
-		catch (Error err) {
+		} catch (Error err) {
 			logger.error("Context initialization failed", err);
 			servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, err);
 			throw err;

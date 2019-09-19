@@ -81,20 +81,26 @@ public abstract class AbstractDispatcherServletInitializer extends AbstractConte
 		WebApplicationContext servletAppContext = createServletApplicationContext();
 		Assert.notNull(servletAppContext, "createServletApplicationContext() must not return null");
 
+		// 创建DispatcherServlet（直接new了一个DispatcherServlet）
 		FrameworkServlet dispatcherServlet = createDispatcherServlet(servletAppContext);
 		Assert.notNull(dispatcherServlet, "createDispatcherServlet(WebApplicationContext) must not return null");
 		dispatcherServlet.setContextInitializers(getServletApplicationContextInitializers());
 
+		// 把DispatcherServlet注册到servletContext里（以前都是在web.xml里配置）
 		ServletRegistration.Dynamic registration = servletContext.addServlet(servletName, dispatcherServlet);
 		if (registration == null) {
 			throw new IllegalStateException("Failed to register servlet with name '" + servletName + "'. " +
 					"Check if there is another servlet registered under the same name.");
 		}
 
+		// 设置启动时加载
 		registration.setLoadOnStartup(1);
+		// 指定映射（需要自己实现）
 		registration.addMapping(getServletMappings());
+		// 是否支持异步
 		registration.setAsyncSupported(isAsyncSupported());
 
+		// 注册过滤器
 		Filter[] filters = getServletFilters();
 		if (!ObjectUtils.isEmpty(filters)) {
 			for (Filter filter : filters) {
@@ -141,6 +147,8 @@ public abstract class AbstractDispatcherServletInitializer extends AbstractConte
 	 * @see #createServletApplicationContext()
 	 * @see DispatcherServlet#setContextInitializers
 	 * @see #getRootApplicationContextInitializers()
+	 *
+	 * 翻译：指定要应用于特定于servlet的应用程序上下文的应用程序上下文初始化器，{@code DispatcherServlet}使用该应用程序上下文创建。
 	 */
 	@Nullable
 	protected ApplicationContextInitializer<?>[] getServletApplicationContextInitializers() {

@@ -175,9 +175,11 @@ public abstract class TransactionSynchronizationManager {
 	 * @see ResourceTransactionManager#getResourceFactory()
 	 */
 	public static void bindResource(Object key, Object value) throws IllegalStateException {
+		// 必要时unwrap给定的连接池; 否则按原样返回给定的连接池
 		Object actualKey = TransactionSynchronizationUtils.unwrapResourceIfNecessary(key);
 		Assert.notNull(value, "Value must not be null");
 		Map<Object, Object> map = resources.get();
+		// 如果ThreadLocal Map不存在则新建，并将其设置到resources中
 		// set ThreadLocal Map if none found
 		if (map == null) {
 			map = new HashMap<>();

@@ -245,6 +245,7 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 	/**
+	 * 这里的添加指的是beanFactory.addBeanPostProcessor()直接添加到工厂的beanPostProcessors属性
 	 * 之前已经添加了三个后置处理器:
 	 * prepareBeanFactory()时注册了两个: ApplicationContextAwareProcessor ApplicationListenerDetector
 	 * ConfigurationClassPostProcessor执行父类postProcessBeanFactory()时注册了一个: ConfigurationClassPostProcessor.ImportAwareBeanPostProcessor
